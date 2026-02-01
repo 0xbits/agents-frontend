@@ -5,7 +5,7 @@ import { Star, MessageSquare, ExternalLink, Check } from "lucide-react";
 
 export interface Agent {
   id: string;
-  name: string;
+  name?: string;
   description?: string;
   uri?: string;
   rating?: number;
