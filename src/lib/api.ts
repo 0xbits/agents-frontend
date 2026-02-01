@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.agents.b1ts.dev";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://agents-api.b1ts.dev";
 
 export interface Agent {
   id: string;
