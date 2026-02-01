@@ -117,7 +117,7 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
 
         {/* Stats - subtle */}
         <div className="flex items-center gap-4 pt-4 border-t border-[var(--surface-border)]">
-          {agent.rating !== undefined && (
+          {agent.rating != null && (
             <div className="flex items-center gap-1.5 text-[var(--foreground-muted)]">
               <Star className="w-3.5 h-3.5" />
               <span className="text-sm">{agent.rating.toFixed(1)}</span>
