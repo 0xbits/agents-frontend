@@ -1,19 +1,43 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://agents-api.b1ts.dev";
 
+export interface AgentService {
+  name: string;
+  endpoint: string;
+  version?: string | null;
+  description?: string | null;
+  capabilities?: string[] | null;
+  tools?: string[] | null;
+  skills?: string[] | null;
+}
+
 export interface Agent {
   id: string;
   owner: string;
-  uri?: string;
-  wallet?: string;
-  name?: string;
-  description?: string;
-  image?: string;
+  uri?: string | null;
+  wallet?: string | null;
+  name?: string | null;
+  description?: string | null;
+  image?: string | null;
+  externalUrl?: string | null;
   active?: boolean;
+  x402Support?: boolean;
+  hasMCP?: boolean;
+  hasA2A?: boolean;
+  mcpCapabilities?: string[] | null;
+  mcpTools?: string[] | null;
+  a2aSkills?: string[] | null;
+  tags?: string[] | null;
+  protocols?: string[] | null;
+  chain?: string | null;
+  chainId?: number | null;
+  supportedTrust?: string[] | null;
   feedbackCount: number;
-  avgRating?: number;
+  avgRating?: number | null;
   registeredAt: string;
   registeredBlock: string;
-  services?: { name: string; endpoint: string; version?: string }[];
+  metadataFetched?: boolean;
+  metadataUpdatedAt?: string | null;
+  services?: AgentService[] | null;
 }
 
 export interface SearchResponse {

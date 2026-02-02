@@ -143,10 +143,10 @@ export default function Home() {
                     key={agent.id} 
                     agent={{
                       id: agent.id,
-                      name: agent.name,
-                      description: agent.description,
-                      uri: agent.uri,
-                      rating: agent.avgRating,
+                      name: agent.name ?? undefined,
+                      description: agent.description ?? undefined,
+                      uri: agent.uri ?? undefined,
+                      rating: agent.avgRating ?? undefined,
                       feedbackCount: agent.feedbackCount,
                       owner: agent.owner,
                       isActive: true,
