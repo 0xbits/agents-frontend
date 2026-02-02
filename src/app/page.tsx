@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard, HowItWorks, AccessMethods, McpConfig } from "@/components";
+import { SearchBar, AgentCard, WhyRegistry, AccessMethods, McpConfig } from "@/components";
 import { QuickFilters } from "@/components/QuickFilters";
 import { CapabilityCard } from "@/components/CapabilityCard";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
-import { X } from "lucide-react";
+import { Bot, Coins, Wrench, X } from "lucide-react";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -20,6 +20,11 @@ function HomeContent() {
     agentsWithMCP: 0,
     agentsWithA2A: 0,
     agentsWithX402: 0,
+  });
+  const [healthStats, setHealthStats] = useState({
+    total: 0,
+    healthy: 0,
+    unhealthy: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
@@ -47,6 +52,20 @@ function HomeContent() {
           agentsWithA2A: statsData.agentsWithA2A ?? 0,
           agentsWithX402: statsData.agentsWithX402 ?? 0,
         });
+
+        try {
+          const healthRes = await fetch("https://agents-services.b1ts.dev/health/stats");
+          if (healthRes.ok) {
+            const health = await healthRes.json();
+            setHealthStats({
+              total: health.total || 0,
+              healthy: health.counts?.healthy || 0,
+              unhealthy: (health.counts?.unhealthy || 0) + (health.counts?.unreachable || 0),
+            });
+          }
+        } catch (healthError) {
+          console.warn("Health stats unavailable:", healthError);
+        }
         
         if (tag) {
           setActiveFilter({ type: "tag", value: tag });
@@ -153,6 +172,12 @@ function HomeContent() {
             >
               Agents
             </a>
+            <a
+              href="/docs/mcp"
+              className="hover:text-[var(--foreground-muted)] transition-colors"
+            >
+              Docs
+            </a>
             <a 
               href="https://github.com/0xbits/8004-indexer#api" 
               target="_blank"
@@ -195,7 +220,39 @@ function HomeContent() {
           </div>
         </section>
 
-        <HowItWorks />
+        {/* Browse by capability */}
+        <section className="px-6 pb-24">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+                Browse by capability
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <CapabilityCard
+                title="MCP Tools"
+                icon={Wrench}
+                count={stats.agentsWithMCP || 0}
+                href="/?mcp=true"
+                description="Tool-enabled agents with MCP endpoints."
+              />
+              <CapabilityCard
+                title="A2A Ready"
+                icon={Bot}
+                count={stats.agentsWithA2A || 0}
+                href="/?a2a=true"
+                description="Agents exposing A2A skills."
+              />
+              <CapabilityCard
+                title="x402 Payments"
+                icon={Coins}
+                count={stats.agentsWithX402 || 0}
+                href="/?x402=true"
+                description="Agents accepting x402 payments."
+              />
+            </div>
+          </div>
+        </section>
 
         {/* Results */}
         <section className="px-6 pb-16">
@@ -272,39 +329,7 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Browse by capability */}
-        <section className="px-6 pb-24">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-                Browse by capability
-              </h2>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <CapabilityCard
-                title="MCP Tools"
-                icon="🔧"
-                count={stats.agentsWithMCP || 0}
-                href="/?mcp=true"
-                description="Tool-enabled agents with MCP endpoints."
-              />
-              <CapabilityCard
-                title="A2A Ready"
-                icon="🤖"
-                count={stats.agentsWithA2A || 0}
-                href="/?a2a=true"
-                description="Agents exposing A2A skills."
-              />
-              <CapabilityCard
-                title="x402 Payments"
-                icon="💰"
-                count={stats.agentsWithX402 || 0}
-                href="/?x402=true"
-                description="Agents accepting x402 payments."
-              />
-            </div>
-          </div>
-        </section>
+        <WhyRegistry />
 
         <McpConfig />
         
@@ -315,10 +340,11 @@ function HomeContent() {
       <footer className="border-t border-[var(--surface-border)] py-6 px-6">
         <div className="max-w-6xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-xs text-[var(--foreground-subtle)]">
           <div className="flex items-center gap-4">
-            <span>Built by Bits ✨</span>
+            <span>Built by Bits</span>
             <span>
               {stats.totalAgents.toLocaleString()} agents indexed
             </span>
+            <span>{healthStats.healthy.toLocaleString()} agents online</span>
             <a
               href="https://eips.ethereum.org/EIPS/eip-8004"
               target="_blank"

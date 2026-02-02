@@ -1,5 +1,6 @@
 export { SearchBar } from './SearchBar';
 export { AgentCard, type Agent } from './AgentCard';
-export { HowItWorks } from './HowItWorks';
+export { WhyRegistry } from './WhyRegistry';
 export { AccessMethods } from './AccessMethods';
 export { McpConfig } from './McpConfig';
+export { HealthBadge } from './HealthBadge';

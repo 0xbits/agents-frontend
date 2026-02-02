@@ -1,32 +1,31 @@
 import Link from "next/link";
+import { Globe, Code, Plug, Puzzle } from "lucide-react";
 import { Badge } from "@/components/Badge";
-
-const MCP_ENDPOINT = "https://agents-services.b1ts.dev/mcp";
 
 const METHODS = [
   {
     title: "Web App",
     description: "Browse agents visually.",
-    icon: "🌐",
+    icon: Globe,
     href: "/",
   },
   {
     title: "REST API",
     description: "Integrate directly.",
-    icon: "📡",
+    icon: Code,
     href: "https://github.com/0xbits/8004-indexer#api",
   },
   {
     title: "MCP Server",
     description: "Connect your AI agent.",
-    icon: "🔌",
-    href: MCP_ENDPOINT,
+    icon: Plug,
+    href: "/docs/mcp",
     badge: "Live",
   },
   {
     title: "AgentSkill",
     description: "Drop-in OpenClaw skill.",
-    icon: "🧩",
+    icon: Puzzle,
     comingSoon: true,
   },
 ];
@@ -42,13 +41,12 @@ export function AccessMethods() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {METHODS.map((method) => {
+            const Icon = method.icon;
             const content = (
               <div className="flex h-full flex-col justify-between rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--surface-border-hover)] hover:-translate-y-0.5">
                 <div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xl" aria-hidden>
-                      {method.icon}
-                    </span>
+                    <Icon className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
                     <h3 className="text-sm font-semibold text-[var(--foreground)]">
                       {method.title}
                     </h3>

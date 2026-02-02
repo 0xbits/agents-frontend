@@ -10,6 +10,7 @@ import { TechnicalDetails } from "@/components/AgentDetail/TechnicalDetails";
 import { FeedbackSection } from "@/components/AgentDetail/FeedbackSection";
 import { TryItModule } from "@/components/AgentDetail/TryItModule";
 import { CopyConfigButtons } from "@/components/AgentDetail/CopyConfigButtons";
+import { HealthStatus } from "@/components/AgentDetail/HealthStatus";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
@@ -135,6 +136,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
                 </div>
               </section>
             )}
+
+            <HealthStatus agentId={id} />
 
             <ServicesSection services={agent.services} />
 

@@ -72,6 +72,23 @@ export interface FeedbackResponse {
   feedback: FeedbackItem[];
 }
 
+export interface AgentHealth {
+  agentId: number;
+  status: "healthy" | "unhealthy" | "unreachable" | "unknown";
+  lastCheckedAt?: string;
+  lastHealthyAt?: string;
+  latencyMs?: number;
+  httpStatus?: number;
+  mcpValid?: boolean;
+  mcpToolsCount?: number;
+  mcpError?: string;
+  a2aValid?: boolean;
+  a2aSkillsCount?: number;
+  a2aError?: string;
+  x402Price?: string;
+  x402Currency?: string;
+}
+
 export async function searchAgents(
   query: string = "",
   options: { 
@@ -141,4 +158,14 @@ export async function getAgentFeedback(id: string): Promise<FeedbackResponse> {
 
   if (!res.ok) throw new Error("Failed to fetch feedback");
   return res.json();
+}
+
+export async function getAgentHealth(agentId: string): Promise<AgentHealth | null> {
+  try {
+    const res = await fetch(`https://agents-services.b1ts.dev/health/${agentId}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
