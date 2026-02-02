@@ -1,27 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { SearchBar, AgentCard } from "@/components";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
-import { Boxes, Activity, Users } from "lucide-react";
+import { Boxes, Activity, Users, X } from "lucide-react";
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [stats, setStats] = useState({ totalAgents: 0, totalFeedback: 0, agentsWithURI: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<{ type: string; value: string } | null>(null);
 
-  // Load initial data
+  // Load initial data or handle URL params
   useEffect(() => {
-    async function loadInitialData() {
+    const tag = searchParams.get("tag");
+    const protocol = searchParams.get("protocol");
+    
+    async function loadData() {
+      setIsLoading(true);
       try {
-        const [topData, statsData] = await Promise.all([
-          getTopAgents("feedback", 6),
-          getStats(),
-        ]);
-        setAgents(topData.agents);
+        const statsData = await getStats();
         setStats(statsData);
+        
+        if (tag) {
+          setActiveFilter({ type: "tag", value: tag });
+          setHasSearched(true);
+          const data = await searchAgents("", { limit: 20, sort: "feedback", tag });
+          setAgents(data.results);
+        } else if (protocol) {
+          setActiveFilter({ type: "protocol", value: protocol });
+          setHasSearched(true);
+          const data = await searchAgents("", { limit: 20, sort: "feedback", protocol });
+          setAgents(data.results);
+        } else {
+          setActiveFilter(null);
+          const topData = await getTopAgents("feedback", 6);
+          setAgents(topData.agents);
+        }
         setError(null);
       } catch (err) {
         console.error("Failed to load data:", err);
@@ -30,8 +50,8 @@ export default function Home() {
         setIsLoading(false);
       }
     }
-    loadInitialData();
-  }, []);
+    loadData();
+  }, [searchParams]);
 
   const handleSearch = async (query: string) => {
     setIsLoading(true);
@@ -110,10 +130,25 @@ export default function Home() {
         <section className="px-6 pb-24">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-                {hasSearched ? "Results" : "Top Agents"}
-              </h2>
-              {!hasSearched && (
+              <div className="flex items-center gap-3">
+                <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+                  {activeFilter 
+                    ? `${activeFilter.type}: ${activeFilter.value}` 
+                    : hasSearched 
+                      ? "Results" 
+                      : "Top Agents"}
+                </h2>
+                {activeFilter && (
+                  <button
+                    onClick={() => router.push("/")}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--surface-border)] px-2 py-1 text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] hover:border-[var(--surface-border-hover)] transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </button>
+                )}
+              </div>
+              {!hasSearched && !activeFilter && (
                 <button 
                   onClick={() => handleSearch("")}
                   className="text-sm text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
@@ -169,7 +204,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-[var(--surface-border)] py-6 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-[var(--foreground-subtle)]">
-          <span>Built by Bits 🐾</span>
+          <span>Built by Bits ✨</span>
           <a 
             href="https://eips.ethereum.org/EIPS/eip-8004" 
             target="_blank"
@@ -181,5 +216,17 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-[var(--foreground-muted)]">Loading...</div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

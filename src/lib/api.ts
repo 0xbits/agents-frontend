@@ -56,15 +56,29 @@ export interface StatsResponse {
 
 export async function searchAgents(
   query: string = "",
-  options: { limit?: number; offset?: number; sort?: string } = {}
+  options: { 
+    limit?: number; 
+    offset?: number; 
+    sort?: string;
+    tag?: string;
+    protocol?: string;
+    mcp?: boolean;
+    a2a?: boolean;
+    x402?: boolean;
+  } = {}
 ): Promise<SearchResponse> {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (options.limit) params.set("limit", options.limit.toString());
   if (options.offset) params.set("offset", options.offset.toString());
   if (options.sort) params.set("sort", options.sort);
+  if (options.tag) params.set("tag", options.tag);
+  if (options.protocol) params.set("protocol", options.protocol);
+  if (options.mcp) params.set("mcp", "true");
+  if (options.a2a) params.set("a2a", "true");
+  if (options.x402) params.set("x402", "true");
 
-  const res = await fetch(`${API_URL}/search?${params}`, {
+  const res = await fetch(`${API_URL}/agents?${params}`, {
     next: { revalidate: 60 },
   });
   

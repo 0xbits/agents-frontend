@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Star, MessageSquare, ExternalLink, Check } from "lucide-react";
 
 export interface Agent {
@@ -29,15 +30,16 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
-    <div
-      className="animate-fade-in"
+    <Link
+      href={`/agents/${agent.id}`}
+      className="animate-fade-in block"
       style={{ animationDelay: `${delay}ms` }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
         className={`
-          relative p-5 rounded-2xl
+          relative p-5 rounded-2xl cursor-pointer
           bg-[var(--surface)] border border-[var(--surface-border)]
           transition-all duration-300
           ${isHovered 
@@ -138,21 +140,24 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
           )}
           
           {agent.uri && (
-            <a
-              href={agent.uri}
-              target="_blank"
-              rel="noopener noreferrer"
+            <span
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(agent.uri, '_blank');
+              }}
               className="
                 text-[var(--foreground-subtle)]
                 hover:text-[var(--foreground-muted)]
                 transition-colors duration-200
+                cursor-pointer
               "
             >
               <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            </span>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -44,14 +44,25 @@ export function AgentHero({
             ← Back
           </a>
           {etherscanUrl && (
-            <a
-              href={etherscanUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[var(--foreground-muted)] transition-colors"
-            >
-              View on Etherscan
-            </a>
+            <>
+              <a
+                href={etherscanUrl.replace('etherscan.io', 'app.interface.social').replace('/address/', '/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[var(--foreground-muted)] transition-colors"
+              >
+                View on Interface
+              </a>
+              <span className="text-[var(--surface-border)]">·</span>
+              <a
+                href={etherscanUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[var(--foreground-muted)] transition-colors"
+              >
+                Etherscan
+              </a>
+            </>
           )}
         </div>
 
