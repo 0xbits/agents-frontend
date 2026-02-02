@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
 
+const MCP_ENDPOINT = "https://agents-services.b1ts.dev/mcp";
+
 const METHODS = [
   {
     title: "Web App",
@@ -16,13 +18,14 @@ const METHODS = [
   },
   {
     title: "MCP Server",
-    description: "Connect your LLM.",
+    description: "Connect your AI agent.",
     icon: "🔌",
-    comingSoon: true,
+    href: MCP_ENDPOINT,
+    badge: "Live",
   },
   {
     title: "AgentSkill",
-    description: "Reusable modules.",
+    description: "Drop-in OpenClaw skill.",
     icon: "🧩",
     comingSoon: true,
   },
@@ -57,6 +60,10 @@ export function AccessMethods() {
                 {method.comingSoon ? (
                   <div className="mt-6">
                     <Badge variant="muted">Coming soon</Badge>
+                  </div>
+                ) : method.badge ? (
+                  <div className="mt-6">
+                    <Badge variant="green">{method.badge}</Badge>
                   </div>
                 ) : null}
               </div>

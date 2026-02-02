@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard, HowItWorks, AccessMethods } from "@/components";
+import { SearchBar, AgentCard, HowItWorks, AccessMethods, McpConfig } from "@/components";
 import { QuickFilters } from "@/components/QuickFilters";
 import { CapabilityCard } from "@/components/CapabilityCard";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
@@ -306,6 +306,8 @@ function HomeContent() {
           </div>
         </section>
 
+        <McpConfig />
+        
         <AccessMethods />
       </main>
 
