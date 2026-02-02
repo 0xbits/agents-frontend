@@ -51,7 +51,24 @@ export interface SearchResponse {
 export interface StatsResponse {
   totalAgents: number;
   totalFeedback: number;
-  agentsWithURI: number;
+  agentsWithURI?: number;
+  agentsWithMetadata?: number;
+  mcpAgents?: number;
+  a2aAgents?: number;
+  x402Agents?: number;
+}
+
+export interface FeedbackItem {
+  id: string;
+  agentId: string;
+  sender: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface FeedbackResponse {
+  feedback: FeedbackItem[];
 }
 
 export async function searchAgents(
@@ -113,5 +130,14 @@ export async function getStats(): Promise<StatsResponse> {
   });
   
   if (!res.ok) throw new Error("Failed to fetch stats");
+  return res.json();
+}
+
+export async function getAgentFeedback(id: string): Promise<FeedbackResponse> {
+  const res = await fetch(`${API_URL}/agents/${id}/feedback`, {
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch feedback");
   return res.json();
 }

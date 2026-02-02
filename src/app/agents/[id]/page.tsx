@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAgent } from "@/lib/api";
+import { getAgent, getAgentFeedback } from "@/lib/api";
 import { Badge } from "@/components/Badge";
 import { AgentHero } from "@/components/AgentDetail/AgentHero";
 import { CapabilityBadges } from "@/components/AgentDetail/CapabilityBadges";
 import { ServicesSection } from "@/components/AgentDetail/ServicesSection";
 import { ToolsList } from "@/components/AgentDetail/ToolsList";
 import { TechnicalDetails } from "@/components/AgentDetail/TechnicalDetails";
+import { FeedbackSection } from "@/components/AgentDetail/FeedbackSection";
+import { TryItModule } from "@/components/AgentDetail/TryItModule";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
@@ -15,6 +17,15 @@ const formatDate = (value?: string | null) => {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
     new Date(ts * 1000)
   );
+};
+
+const findServiceEndpoint = (services: { name: string; endpoint: string; description?: string | null }[] | null | undefined, match: RegExp) => {
+  if (!services) return null;
+  for (const service of services) {
+    const haystack = `${service.name} ${service.description ?? ""} ${service.endpoint}`.toLowerCase();
+    if (match.test(haystack) && service.endpoint) return service.endpoint;
+  }
+  return null;
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -44,11 +55,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const agent = await getAgent(id).catch(() => notFound());
+  const feedbackResponse = await getAgentFeedback(id).catch(() => ({ feedback: [] }));
+  const feedbackItems = feedbackResponse.feedback ?? [];
 
   const registrationDate = formatDate(agent.registeredAt);
   const etherscanUrl = agent.owner
     ? `https://etherscan.io/address/${agent.owner}`
     : null;
+  const mcpEndpoint = agent.hasMCP ? findServiceEndpoint(agent.services, /mcp/i) : null;
+  const a2aEndpoint = agent.hasA2A ? findServiceEndpoint(agent.services, /a2a/i) : null;
+  const showTryItModule = Boolean((agent.hasMCP && mcpEndpoint) || (agent.hasA2A && a2aEndpoint));
 
   return (
     <div className="min-h-screen">
@@ -124,6 +140,15 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
             <ToolsList title="Available Tools" items={agent.mcpTools} />
             <ToolsList title="A2A Skills" items={agent.a2aSkills} />
 
+            {showTryItModule && (
+              <TryItModule
+                mcpEndpoint={mcpEndpoint}
+                a2aEndpoint={a2aEndpoint}
+                mcpTools={agent.mcpTools}
+                a2aSkills={agent.a2aSkills}
+              />
+            )}
+
             <section className="mt-12">
               <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider mb-4">
                 Trust & Reputation
@@ -151,15 +176,11 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
                       {agent.feedbackCount}
                     </div>
                   </div>
-                  <a
-                    href={`/agents/${agent.id}/feedback`}
-                    className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
-                  >
-                    Feedback endpoint (coming soon)
-                  </a>
                 </div>
               </div>
             </section>
+
+            <FeedbackSection items={feedbackItems} />
 
             <TechnicalDetails
               owner={agent.owner}

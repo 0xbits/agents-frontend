@@ -3,14 +3,24 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { SearchBar, AgentCard } from "@/components";
+import { QuickFilters } from "@/components/QuickFilters";
+import { CapabilityCard } from "@/components/CapabilityCard";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
-import { Boxes, Activity, Users, X } from "lucide-react";
+import { X } from "lucide-react";
 
 function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [stats, setStats] = useState({ totalAgents: 0, totalFeedback: 0, agentsWithURI: 0 });
+  const [stats, setStats] = useState({
+    totalAgents: 0,
+    totalFeedback: 0,
+    agentsWithURI: 0,
+    agentsWithMetadata: 0,
+    mcpAgents: 0,
+    a2aAgents: 0,
+    x402Agents: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,12 +30,23 @@ function HomeContent() {
   useEffect(() => {
     const tag = searchParams.get("tag");
     const protocol = searchParams.get("protocol");
+    const mcp = searchParams.get("mcp") === "true";
+    const a2a = searchParams.get("a2a") === "true";
+    const x402 = searchParams.get("x402") === "true";
     
     async function loadData() {
       setIsLoading(true);
       try {
         const statsData = await getStats();
-        setStats(statsData);
+        setStats({
+          totalAgents: statsData.totalAgents ?? 0,
+          totalFeedback: statsData.totalFeedback ?? 0,
+          agentsWithURI: statsData.agentsWithURI ?? 0,
+          agentsWithMetadata: statsData.agentsWithMetadata ?? 0,
+          mcpAgents: statsData.mcpAgents ?? 0,
+          a2aAgents: statsData.a2aAgents ?? 0,
+          x402Agents: statsData.x402Agents ?? 0,
+        });
         
         if (tag) {
           setActiveFilter({ type: "tag", value: tag });
@@ -36,6 +57,21 @@ function HomeContent() {
           setActiveFilter({ type: "protocol", value: protocol });
           setHasSearched(true);
           const data = await searchAgents("", { limit: 20, sort: "feedback", protocol });
+          setAgents(data.results);
+        } else if (mcp) {
+          setActiveFilter({ type: "mcp", value: "true" });
+          setHasSearched(true);
+          const data = await searchAgents("", { limit: 20, sort: "feedback", mcp: true });
+          setAgents(data.results);
+        } else if (a2a) {
+          setActiveFilter({ type: "a2a", value: "true" });
+          setHasSearched(true);
+          const data = await searchAgents("", { limit: 20, sort: "feedback", a2a: true });
+          setAgents(data.results);
+        } else if (x402) {
+          setActiveFilter({ type: "x402", value: "true" });
+          setHasSearched(true);
+          const data = await searchAgents("", { limit: 20, sort: "feedback", x402: true });
           setAgents(data.results);
         } else {
           setActiveFilter(null);
@@ -57,6 +93,7 @@ function HomeContent() {
     setIsLoading(true);
     setHasSearched(true);
     setError(null);
+    setActiveFilter(null);
     
     try {
       const data = await searchAgents(query, { limit: 20, sort: "feedback" });
@@ -69,11 +106,36 @@ function HomeContent() {
     }
   };
 
-  const STATS = [
-    { label: "Agents", value: stats.totalAgents.toLocaleString(), icon: Boxes },
-    { label: "Feedback", value: stats.totalFeedback.toLocaleString(), icon: Activity },
-    { label: "With URI", value: stats.agentsWithURI.toLocaleString(), icon: Users },
+  const quickFilters = [
+    { label: "MCP", type: "mcp" as const, value: "true" },
+    { label: "A2A", type: "a2a" as const, value: "true" },
+    { label: "x402", type: "x402" as const, value: "true" },
+    { label: "DeFi", type: "tag" as const, value: "defi" },
+    { label: "Trading", type: "tag" as const, value: "trading" },
   ];
+
+  const handleQuickFilterToggle = (filter: { type: string; value: string }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const isActive =
+      activeFilter?.type === filter.type && activeFilter?.value === filter.value;
+
+    params.delete("tag");
+    params.delete("protocol");
+    params.delete("mcp");
+    params.delete("a2a");
+    params.delete("x402");
+
+    if (!isActive) {
+      if (filter.type === "tag") params.set("tag", filter.value);
+      if (filter.type === "protocol") params.set("protocol", filter.value);
+      if (filter.type === "mcp") params.set("mcp", "true");
+      if (filter.type === "a2a") params.set("a2a", "true");
+      if (filter.type === "x402") params.set("x402", "true");
+    }
+
+    const queryString = params.toString();
+    router.push(queryString ? `/?${queryString}` : "/");
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -104,36 +166,31 @@ function HomeContent() {
         <section className="py-24 px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4 text-[var(--foreground)]">
-              Discover AI Agents
+              Discover AI Agents on Ethereum
             </h1>
             
-            <p className="text-lg text-[var(--foreground-muted)] mb-12 max-w-xl mx-auto leading-relaxed">
-              The registry for ERC-8004 Trustless Agents on Ethereum.
+            <p className="text-lg text-[var(--foreground-muted)] mb-10 max-w-xl mx-auto leading-relaxed">
+              Find agents with MCP tools, A2A skills, and x402 payments ready to deploy.
             </p>
             
             <SearchBar onSearch={handleSearch} autoFocus />
-            
-            {/* Stats */}
-            <div className="flex items-center justify-center gap-8 mt-20 text-sm">
-              {STATS.map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2 text-[var(--foreground-subtle)]">
-                  <stat.icon className="w-4 h-4" />
-                  <span className="font-medium text-[var(--foreground-muted)]">{stat.value}</span>
-                  <span>{stat.label}</span>
-                </div>
-              ))}
-            </div>
+
+            <QuickFilters
+              options={quickFilters}
+              activeFilter={activeFilter}
+              onToggle={handleQuickFilterToggle}
+            />
           </div>
         </section>
 
         {/* Results */}
-        <section className="px-6 pb-24">
+        <section className="px-6 pb-16">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-                  {activeFilter 
-                    ? `${activeFilter.type}: ${activeFilter.value}` 
+                  {activeFilter
+                    ? `${activeFilter.type}: ${activeFilter.value}`
                     : hasSearched 
                       ? "Results" 
                       : "Top Agents"}
@@ -199,14 +256,59 @@ function HomeContent() {
             )}
           </div>
         </section>
+
+        {/* Browse by capability */}
+        <section className="px-6 pb-24">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+                Browse by capability
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <CapabilityCard
+                title="MCP Tools"
+                icon="🔧"
+                count={stats.mcpAgents || 0}
+                href="/?mcp=true"
+                description="Tool-enabled agents with MCP endpoints."
+              />
+              <CapabilityCard
+                title="A2A Ready"
+                icon="🤖"
+                count={stats.a2aAgents || 0}
+                href="/?a2a=true"
+                description="Agents exposing A2A skills."
+              />
+              <CapabilityCard
+                title="x402 Payments"
+                icon="💰"
+                count={stats.x402Agents || 0}
+                href="/?x402=true"
+                description="Agents requiring x402 payments."
+              />
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
       <footer className="border-t border-[var(--surface-border)] py-6 px-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-[var(--foreground-subtle)]">
-          <span>Built by Bits ✨</span>
-          <a 
-            href="https://eips.ethereum.org/EIPS/eip-8004" 
+        <div className="max-w-6xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-xs text-[var(--foreground-subtle)]">
+          <div className="flex items-center gap-4">
+            <span>Built by Bits ✨</span>
+            <span>
+              {stats.totalAgents.toLocaleString()} agents indexed
+            </span>
+            <span>
+              {(stats.agentsWithMetadata || stats.agentsWithURI || 0).toLocaleString()} with metadata
+            </span>
+            <span>
+              {stats.totalFeedback.toLocaleString()} feedback entries
+            </span>
+          </div>
+          <a
+            href="https://eips.ethereum.org/EIPS/eip-8004"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[var(--foreground-muted)] transition-colors"
