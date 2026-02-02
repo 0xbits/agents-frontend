@@ -9,6 +9,7 @@ export interface Agent {
   name?: string;
   description?: string;
   uri?: string;
+  image?: string;
   rating?: number;
   feedbackCount?: number;
   owner?: string;
@@ -60,17 +61,30 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
 
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div 
-            className={`
-              w-10 h-10 rounded-xl flex items-center justify-center
-              bg-[var(--surface-hover)] border border-[var(--surface-border)]
-              text-[var(--foreground-muted)] font-medium text-sm
-              transition-all duration-300
-              ${isHovered ? 'border-[var(--surface-border-hover)]' : ''}
-            `}
-          >
-            {agent.name?.charAt(0)?.toUpperCase() || '#'}
-          </div>
+          {agent.image ? (
+            <img
+              src={agent.image}
+              alt={agent.name || `Agent #${agent.id}`}
+              className={`
+                w-10 h-10 rounded-xl object-cover
+                border border-[var(--surface-border)]
+                transition-all duration-300
+                ${isHovered ? 'border-[var(--surface-border-hover)]' : ''}
+              `}
+            />
+          ) : (
+            <div 
+              className={`
+                w-10 h-10 rounded-xl flex items-center justify-center
+                bg-[var(--surface-hover)] border border-[var(--surface-border)]
+                text-[var(--foreground-muted)] font-medium text-sm
+                transition-all duration-300
+                ${isHovered ? 'border-[var(--surface-border-hover)]' : ''}
+              `}
+            >
+              {agent.name?.charAt(0)?.toUpperCase() || '#'}
+            </div>
+          )}
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

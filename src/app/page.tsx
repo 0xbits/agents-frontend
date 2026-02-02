@@ -142,13 +142,19 @@ function HomeContent() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/90 backdrop-blur-xl border-b border-[var(--surface-border)]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-medium tracking-tight">agents.b1ts.dev</span>
-          </div>
+          <a href="/" className="flex items-center gap-2">
+            <span className="font-medium tracking-tight">agents</span>
+          </a>
           
           <nav className="flex items-center gap-6 text-sm text-[var(--foreground-subtle)]">
-            <a href="#" className="hover:text-[var(--foreground-muted)] transition-colors">Explore</a>
-            <a href="/docs" className="hover:text-[var(--foreground-muted)] transition-colors">API</a>
+            <a 
+              href="https://github.com/0xbits/8004-indexer#api" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--foreground-muted)] transition-colors"
+            >
+              API
+            </a>
             <a 
               href="https://github.com/0xbits/8004-indexer" 
               target="_blank"
@@ -166,11 +172,11 @@ function HomeContent() {
         <section className="py-24 px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4 text-[var(--foreground)]">
-              Discover AI Agents on Ethereum
+              Find skills your agent needs
             </h1>
             
             <p className="text-lg text-[var(--foreground-muted)] mb-10 max-w-xl mx-auto leading-relaxed">
-              Find agents with MCP tools, A2A skills, and x402 payments ready to deploy.
+              Discover MCP tools, A2A skills, and agent capabilities — powered by Ethereum.
             </p>
             
             <SearchBar onSearch={handleSearch} autoFocus />
@@ -238,6 +244,7 @@ function HomeContent() {
                       name: agent.name ?? undefined,
                       description: agent.description ?? undefined,
                       uri: agent.uri ?? undefined,
+                      image: agent.image ?? undefined,
                       rating: agent.avgRating ?? undefined,
                       feedbackCount: agent.feedbackCount,
                       owner: agent.owner,
