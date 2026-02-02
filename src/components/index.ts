@@ -4,4 +4,3 @@ export { WhyRegistry } from './WhyRegistry';
 export { AccessMethods } from './AccessMethods';
 export { McpConfig } from './McpConfig';
 export { HealthBadge } from './HealthBadge';
-export { AgentsView } from './AgentsView';

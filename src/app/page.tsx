@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard, AgentsView } from "@/components";
+import { SearchBar, AgentCard } from "@/components";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
-import { X, Copy, Check, ArrowRight } from "lucide-react";
+import { X, Copy, Check, ArrowRight, ExternalLink } from "lucide-react";
 
-function CopyButton({ text, className = "" }: { text: string; className?: string }) {
+function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -14,9 +14,113 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={handleCopy} className={`p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors ${className}`}>
+    <button onClick={handleCopy} className="p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors">
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
+  );
+}
+
+function InstallView() {
+  const endpoints = [
+    { label: "MCP Server", url: "https://agents-services.b1ts.dev/mcp" },
+    { label: "REST API", url: "https://agents-api.b1ts.dev" },
+  ];
+
+  const tools = [
+    { name: "search_agents", desc: "Search and filter agents" },
+    { name: "get_agent", desc: "Get agent details by ID" },
+    { name: "get_agent_tools", desc: "List agent's MCP tools" },
+    { name: "get_agent_health", desc: "Check agent health status" },
+    { name: "get_stats", desc: "Registry statistics" },
+  ];
+
+  const mcpConfig = `{
+  "mcpServers": {
+    "agents": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://agents-services.b1ts.dev/mcp"]
+    }
+  }
+}`;
+
+  return (
+    <div className="py-12 px-6">
+      <div className="max-w-2xl mx-auto space-y-12">
+        {/* Quick Start */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium">Quick Start</h2>
+          {endpoints.map((endpoint) => (
+            <div key={endpoint.label} className="space-y-1">
+              <div className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
+                {endpoint.label}
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--surface-border)]">
+                <code className="flex-1 text-sm font-mono text-[var(--foreground-muted)]">
+                  {endpoint.url}
+                </code>
+                <CopyButton text={endpoint.url} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Setup Guide */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium">Setup Guide</h2>
+          <p className="text-sm text-[var(--foreground-muted)]">
+            Add to your Claude Desktop, Cursor, or OpenClaw config:
+          </p>
+          <div className="relative">
+            <pre className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-border)] text-sm font-mono text-[var(--foreground-muted)] overflow-x-auto">
+              {mcpConfig}
+            </pre>
+            <div className="absolute top-3 right-3">
+              <CopyButton text={mcpConfig} />
+            </div>
+          </div>
+        </div>
+
+        {/* Available Tools */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium">Available Tools</h2>
+          <div className="space-y-2">
+            {tools.map((tool) => (
+              <div
+                key={tool.name}
+                className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)] border border-[var(--surface-border)]"
+              >
+                <code className="text-sm font-mono text-[var(--foreground-muted)]">
+                  {tool.name}
+                </code>
+                <span className="text-xs text-[var(--foreground-subtle)]">
+                  {tool.desc}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Links */}
+        <div className="flex items-center gap-6 text-sm">
+          <a
+            href="/docs/mcp"
+            className="inline-flex items-center gap-1.5 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+          >
+            Full Documentation
+            <ExternalLink className="w-3 h-3" />
+          </a>
+          <a
+            href="https://agents-api.b1ts.dev/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+          >
+            API Reference
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -35,17 +139,23 @@ function HomeContent() {
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [protocolFilter, setProtocolFilter] = useState<string | null>(null);
 
   useEffect(() => {
     const mcp = searchParams.get("mcp") === "true";
     const a2a = searchParams.get("a2a") === "true";
     const x402 = searchParams.get("x402") === "true";
+    const tag = searchParams.get("tag");
+    const protocol = searchParams.get("protocol");
     
     const filters = new Set<string>();
     if (mcp) filters.add("mcp");
     if (a2a) filters.add("a2a");
     if (x402) filters.add("x402");
     setActiveFilters(filters);
+    setTagFilter(tag);
+    setProtocolFilter(protocol);
     
     async function loadData() {
       setIsLoading(true);
@@ -58,9 +168,17 @@ function HomeContent() {
           agentsWithX402: statsData.agentsWithX402 ?? 0,
         });
         
-        if (mcp || a2a || x402) {
+        if (mcp || a2a || x402 || tag || protocol) {
           setHasSearched(true);
-          const data = await searchAgents("", { limit: 20, sort: "feedback", mcp, a2a, x402 });
+          const data = await searchAgents("", { 
+            limit: 20, 
+            sort: "feedback", 
+            mcp, 
+            a2a, 
+            x402,
+            tag: tag || undefined,
+            protocol: protocol || undefined,
+          });
           setAgents(data.results);
         } else {
           const topData = await getTopAgents("feedback", 9);
@@ -89,6 +207,8 @@ function HomeContent() {
         mcp: activeFilters.has("mcp"),
         a2a: activeFilters.has("a2a"),
         x402: activeFilters.has("x402"),
+        tag: tagFilter || undefined,
+        protocol: protocolFilter || undefined,
       });
       setAgents(data.results);
     } catch (err) {
@@ -108,18 +228,19 @@ function HomeContent() {
       params.set(filter, "true");
     }
     
-    const queryString = params.toString();
-    router.push(queryString ? `/?${queryString}` : "/");
+    router.push(params.toString() ? `/?${params.toString()}` : "/");
   };
 
   const clearFilters = () => {
     router.push("/");
   };
 
+  const hasAnyFilter = activeFilters.size > 0 || tagFilter || protocolFilter;
+
   const filterButtons = [
-    { key: "mcp", label: "MCP", count: stats.agentsWithMCP },
-    { key: "a2a", label: "A2A", count: stats.agentsWithA2A },
-    { key: "x402", label: "x402", count: stats.agentsWithX402 },
+    { key: "mcp", label: "MCP" },
+    { key: "a2a", label: "A2A" },
+    { key: "x402", label: "x402" },
   ];
 
   return (
@@ -132,7 +253,7 @@ function HomeContent() {
           <div className="flex items-center gap-1 p-1 rounded-lg bg-[var(--surface)]">
             <button
               onClick={() => setTab("agents")}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`w-20 py-1.5 text-sm rounded-md transition-colors text-center ${
                 tab === "agents"
                   ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
                   : "text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
@@ -142,7 +263,7 @@ function HomeContent() {
             </button>
             <button
               onClick={() => setTab("install")}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`w-20 py-1.5 text-sm rounded-md transition-colors text-center ${
                 tab === "install"
                   ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
                   : "text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
@@ -164,45 +285,61 @@ function HomeContent() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-20 pb-16">
         {tab === "agents" ? (
           <>
             {/* Search + Filters */}
             <section className="py-12 px-6">
               <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl font-medium tracking-tight mb-8 text-center text-[var(--foreground)]">
+                <h1 className="text-3xl sm:text-4xl font-medium tracking-tight mb-8 text-center">
                   Find agent capabilities
                 </h1>
                 
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="flex gap-3 items-center">
                   <div className="flex-1">
                     <SearchBar onSearch={handleSearch} />
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    {filterButtons.map((f) => (
-                      <button
-                        key={f.key}
-                        onClick={() => toggleFilter(f.key)}
-                        className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                          activeFilters.has(f.key)
-                            ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
-                            : "border-[var(--surface-border)] text-[var(--foreground-muted)] hover:border-[var(--foreground-subtle)]"
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                    {activeFilters.size > 0 && (
-                      <button
-                        onClick={clearFilters}
-                        className="p-2 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                  {filterButtons.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => toggleFilter(f.key)}
+                      className={`px-3 py-2 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+                        activeFilters.has(f.key)
+                          ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                          : "border-[var(--surface-border)] text-[var(--foreground-muted)] hover:border-[var(--foreground-subtle)]"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                  
+                  {hasAnyFilter && (
+                    <button
+                      onClick={clearFilters}
+                      className="p-2 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+                      title="Clear filters"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Active tag/protocol filter */}
+                {(tagFilter || protocolFilter) && (
+                  <div className="mt-3 flex items-center gap-2 text-sm">
+                    {tagFilter && (
+                      <span className="px-2 py-1 rounded-full bg-[var(--surface)] text-[var(--foreground-muted)]">
+                        tag: {tagFilter}
+                      </span>
+                    )}
+                    {protocolFilter && (
+                      <span className="px-2 py-1 rounded-full bg-[var(--surface)] text-[var(--foreground-muted)]">
+                        protocol: {protocolFilter}
+                      </span>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             </section>
 
@@ -211,12 +348,12 @@ function HomeContent() {
               <div className="max-w-5xl mx-auto">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
-                    {hasSearched || activeFilters.size > 0 ? "Results" : "Popular"}
+                    {hasSearched || hasAnyFilter ? "Results" : "Popular"}
                   </span>
-                  {!hasSearched && activeFilters.size === 0 && (
+                  {!hasSearched && !hasAnyFilter && (
                     <button 
                       onClick={() => handleSearch("")}
-                      className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+                      className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
                     >
                       View all →
                     </button>
@@ -257,7 +394,7 @@ function HomeContent() {
                   </div>
                 )}
                 
-                {(hasSearched || activeFilters.size > 0) && agents.length === 0 && !isLoading && !error && (
+                {(hasSearched || hasAnyFilter) && agents.length === 0 && !isLoading && !error && (
                   <div className="text-center py-16">
                     <p className="text-[var(--foreground-subtle)]">No agents found</p>
                   </div>
@@ -266,16 +403,13 @@ function HomeContent() {
             </section>
 
             {/* Quick Install CTA */}
-            <section className="px-6 py-16 border-t border-[var(--surface-border)]">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-xl font-medium mb-3 text-[var(--foreground)]">
-                  Connect your agent
-                </h2>
-                <p className="text-sm text-[var(--foreground-muted)] mb-6">
-                  Access {stats.totalAgents.toLocaleString()} agents via MCP
+            <section className="px-6 py-12 border-t border-[var(--surface-border)]">
+              <div className="max-w-xl mx-auto text-center">
+                <p className="text-sm text-[var(--foreground-muted)] mb-4">
+                  Connect your agent to {stats.totalAgents.toLocaleString()} capabilities via MCP
                 </p>
                 
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--surface-border)] mb-6 max-w-md mx-auto">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--surface-border)] mb-4">
                   <code className="flex-1 text-sm font-mono text-[var(--foreground-muted)] text-left truncate">
                     https://agents-services.b1ts.dev/mcp
                   </code>
@@ -284,16 +418,16 @@ function HomeContent() {
                 
                 <button
                   onClick={() => setTab("install")}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-2 text-sm text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
                 >
-                  Full setup guide
-                  <ArrowRight className="w-4 h-4" />
+                  Setup guide
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
             </section>
           </>
         ) : (
-          <AgentsView />
+          <InstallView />
         )}
       </main>
 
