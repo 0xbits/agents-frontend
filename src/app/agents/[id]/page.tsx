@@ -72,7 +72,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
     <div className="min-h-screen">
       <main className="pt-20 pb-24">
         <section className="px-6 py-12">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-5xl mx-auto">
+            {/* Hero */}
             <AgentHero
               name={agent.name}
               id={agent.id}
@@ -83,7 +84,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               etherscanUrl={etherscanUrl}
             />
 
-            <div className="mt-6">
+            {/* Capabilities + Health (inline) */}
+            <div className="mt-6 flex flex-wrap items-center gap-4">
               <CapabilityBadges
                 hasMCP={agent.hasMCP}
                 hasA2A={agent.hasA2A}
@@ -91,108 +93,169 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
                 chain={agent.chain}
                 active={agent.active}
               />
+              <div className="hidden sm:block w-px h-4 bg-[var(--surface-border)]" />
+              <HealthStatus agentId={id} />
             </div>
 
+            {/* Tags & Protocols */}
             {(agent.tags?.length || agent.protocols?.length) && (
-              <section className="mt-10">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {agent.tags && agent.tags.length > 0 && (
-                    <div>
-                      <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider mb-3">
-                        Tags
-                      </h2>
-                      <div className="flex flex-wrap gap-2">
-                        {agent.tags.map((tag) => (
-                          <a
-                            key={tag}
-                            href={`/?tag=${encodeURIComponent(tag)}`}
-                            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] hover:border-[var(--surface-border-hover)] transition-colors"
-                          >
-                            {tag}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {agent.protocols && agent.protocols.length > 0 && (
-                    <div>
-                      <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider mb-3">
-                        Protocols
-                      </h2>
-                      <div className="flex flex-wrap gap-2">
-                        {agent.protocols.map((protocol) => (
-                          <a
-                            key={protocol}
-                            href={`/?protocol=${encodeURIComponent(protocol)}`}
-                            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] hover:border-[var(--surface-border-hover)] transition-colors"
-                          >
-                            {protocol}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {agent.tags?.map((tag) => (
+                  <a
+                    key={tag}
+                    href={`/?tag=${encodeURIComponent(tag)}`}
+                    className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] hover:border-[var(--foreground-subtle)] transition-colors"
+                  >
+                    {tag}
+                  </a>
+                ))}
+                {agent.protocols?.map((protocol) => (
+                  <a
+                    key={protocol}
+                    href={`/?protocol=${encodeURIComponent(protocol)}`}
+                    className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] hover:border-[var(--foreground-subtle)] transition-colors"
+                  >
+                    {protocol}
+                  </a>
+                ))}
+              </div>
             )}
 
-            <HealthStatus agentId={id} />
-
-            <ServicesSection services={agent.services} />
-
-            <ToolsList title="Available Tools" items={agent.mcpTools} />
-            <ToolsList title="A2A Skills" items={agent.a2aSkills} />
-
-            {showTryItModule && (
-              <section className="mt-12 space-y-4">
-                <CopyConfigButtons
-                  agent={agent}
-                  mcpEndpoint={mcpEndpoint}
-                  a2aEndpoint={a2aEndpoint}
-                />
-                <TryItModule
-                  mcpEndpoint={mcpEndpoint}
-                  a2aEndpoint={a2aEndpoint}
-                  mcpTools={agent.mcpTools}
-                  a2aSkills={agent.a2aSkills}
-                />
-              </section>
-            )}
-
-            <section className="mt-12">
-              <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider mb-4">
-                Trust & Reputation
-              </h2>
-              <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {agent.supportedTrust?.map((trust) => (
-                    <Badge key={trust} variant="muted">
-                      {trust}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--foreground-muted)]">
-                  {agent.avgRating != null && (
-                    <div>
-                      <span className="text-[var(--foreground-subtle)]">Avg rating</span>
-                      <div className="text-lg font-medium text-[var(--foreground)]">
-                        {agent.avgRating.toFixed(1)}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-[var(--foreground-subtle)]">Feedback</span>
-                    <div className="text-lg font-medium text-[var(--foreground)]">
-                      {agent.feedbackCount}
+            {/* Two Column Layout */}
+            <div className="mt-10 grid gap-8 lg:grid-cols-3">
+              {/* Left: Services + Tools */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Services */}
+                {agent.services && agent.services.length > 0 && (
+                  <div className="space-y-3">
+                    <h2 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
+                      Services
+                    </h2>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {agent.services.map((service, index) => (
+                        <div
+                          key={`${service.name}-${index}`}
+                          className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)]"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-sm font-medium text-[var(--foreground)]">
+                              {service.name}
+                            </span>
+                            {service.version && (
+                              <span className="text-xs text-[var(--foreground-subtle)]">
+                                {service.version}
+                              </span>
+                            )}
+                          </div>
+                          <code className="text-xs text-[var(--foreground-muted)] break-all">
+                            {service.endpoint}
+                          </code>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                )}
+
+                {/* Tools & Skills */}
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <ToolsList title="MCP Tools" items={agent.mcpTools} />
+                  <ToolsList title="A2A Skills" items={agent.a2aSkills} />
                 </div>
+
+                {/* Try It */}
+                {showTryItModule && (
+                  <div className="space-y-4">
+                    <CopyConfigButtons
+                      agent={agent}
+                      mcpEndpoint={mcpEndpoint}
+                      a2aEndpoint={a2aEndpoint}
+                    />
+                    <TryItModule
+                      mcpEndpoint={mcpEndpoint}
+                      a2aEndpoint={a2aEndpoint}
+                      mcpTools={agent.mcpTools}
+                      a2aSkills={agent.a2aSkills}
+                    />
+                  </div>
+                )}
               </div>
-            </section>
 
-            <FeedbackSection items={feedbackItems} />
+              {/* Right: Reputation + Feedback */}
+              <div className="space-y-6">
+                {/* Trust & Reputation */}
+                <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)]">
+                  <h3 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider mb-3">
+                    Reputation
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--foreground-subtle)]">Rating</span>
+                      <span className="text-sm font-medium text-[var(--foreground)]">
+                        {agent.avgRating != null ? agent.avgRating.toFixed(1) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--foreground-subtle)]">Feedback</span>
+                      <span className="text-sm font-medium text-[var(--foreground)]">
+                        {agent.feedbackCount}
+                      </span>
+                    </div>
+                    {agent.supportedTrust && agent.supportedTrust.length > 0 && (
+                      <div className="pt-2 border-t border-[var(--surface-border)]">
+                        <span className="text-xs text-[var(--foreground-subtle)]">Trust mechanisms</span>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {agent.supportedTrust.map((trust) => (
+                            <Badge key={trust} variant="muted">
+                              {trust}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
+                {/* Feedback List */}
+                {feedbackItems.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
+                      Recent Feedback
+                    </h3>
+                    <div className="space-y-2">
+                      {feedbackItems.slice(0, 5).map((item, i) => (
+                        <div
+                          key={i}
+                          className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[var(--foreground-muted)]">
+                              {item.rating?.toFixed(1) || "—"}
+                            </span>
+                            <span className="text-xs text-[var(--foreground-subtle)]">
+                              {item.client?.slice(0, 8)}...
+                            </span>
+                          </div>
+                          {item.tags && item.tags.length > 0 && (
+                            <div className="mt-1 flex gap-1">
+                              {item.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-xs text-[var(--foreground-subtle)]"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Technical Details */}
             <TechnicalDetails
               owner={agent.owner}
               wallet={agent.wallet}
