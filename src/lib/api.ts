@@ -59,15 +59,16 @@ export interface StatsResponse {
 }
 
 export interface FeedbackItem {
-  id: string;
-  agentId: string;
-  sender: string;
+  client: string;
   rating: number;
-  comment?: string | null;
+  tags?: string[];
   createdAt: string;
+  isRevoked?: boolean;
 }
 
 export interface FeedbackResponse {
+  agentId?: string;
+  count?: number;
   feedback: FeedbackItem[];
 }
 

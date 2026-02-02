@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard } from "@/components";
+import { SearchBar, AgentCard, HowItWorks, AccessMethods } from "@/components";
 import { QuickFilters } from "@/components/QuickFilters";
 import { CapabilityCard } from "@/components/CapabilityCard";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
@@ -148,6 +148,12 @@ function HomeContent() {
           
           <nav className="flex items-center gap-6 text-sm text-[var(--foreground-subtle)]">
             <a 
+              href="/"
+              className="hover:text-[var(--foreground-muted)] transition-colors"
+            >
+              Agents
+            </a>
+            <a 
               href="https://github.com/0xbits/8004-indexer#api" 
               target="_blank"
               rel="noopener noreferrer"
@@ -176,7 +182,7 @@ function HomeContent() {
             </h1>
             
             <p className="text-lg text-[var(--foreground-muted)] mb-10 max-w-xl mx-auto leading-relaxed">
-              Discover MCP tools, A2A skills, and agent capabilities — powered by Ethereum.
+              Discover MCP tools, A2A skills, and verified agent capabilities — indexed from Ethereum, cleaned, and ready to use.
             </p>
             
             <SearchBar onSearch={handleSearch} autoFocus />
@@ -188,6 +194,8 @@ function HomeContent() {
             />
           </div>
         </section>
+
+        <HowItWorks />
 
         {/* Results */}
         <section className="px-6 pb-16">
@@ -297,6 +305,8 @@ function HomeContent() {
             </div>
           </div>
         </section>
+
+        <AccessMethods />
       </main>
 
       {/* Footer */}
@@ -307,21 +317,15 @@ function HomeContent() {
             <span>
               {stats.totalAgents.toLocaleString()} agents indexed
             </span>
-            <span>
-              {(stats.agentsWithMetadata || stats.agentsWithURI || 0).toLocaleString()} with metadata
-            </span>
-            <span>
-              {stats.totalFeedback.toLocaleString()} feedback entries
-            </span>
+            <a
+              href="https://eips.ethereum.org/EIPS/eip-8004"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--foreground-muted)] transition-colors"
+            >
+              Powered by ERC-8004
+            </a>
           </div>
-          <a
-            href="https://eips.ethereum.org/EIPS/eip-8004"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[var(--foreground-muted)] transition-colors"
-          >
-            ERC-8004
-          </a>
         </div>
       </footer>
     </div>
