@@ -9,6 +9,7 @@ import { ToolsList } from "@/components/AgentDetail/ToolsList";
 import { TechnicalDetails } from "@/components/AgentDetail/TechnicalDetails";
 import { FeedbackSection } from "@/components/AgentDetail/FeedbackSection";
 import { TryItModule } from "@/components/AgentDetail/TryItModule";
+import { CopyConfigButtons } from "@/components/AgentDetail/CopyConfigButtons";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
@@ -141,12 +142,19 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
             <ToolsList title="A2A Skills" items={agent.a2aSkills} />
 
             {showTryItModule && (
-              <TryItModule
-                mcpEndpoint={mcpEndpoint}
-                a2aEndpoint={a2aEndpoint}
-                mcpTools={agent.mcpTools}
-                a2aSkills={agent.a2aSkills}
-              />
+              <section className="mt-12 space-y-4">
+                <CopyConfigButtons
+                  agent={agent}
+                  mcpEndpoint={mcpEndpoint}
+                  a2aEndpoint={a2aEndpoint}
+                />
+                <TryItModule
+                  mcpEndpoint={mcpEndpoint}
+                  a2aEndpoint={a2aEndpoint}
+                  mcpTools={agent.mcpTools}
+                  a2aSkills={agent.a2aSkills}
+                />
+              </section>
             )}
 
             <section className="mt-12">
