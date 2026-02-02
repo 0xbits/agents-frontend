@@ -17,9 +17,9 @@ function HomeContent() {
     totalFeedback: 0,
     agentsWithURI: 0,
     agentsWithMetadata: 0,
-    mcpAgents: 0,
-    a2aAgents: 0,
-    x402Agents: 0,
+    agentsWithMCP: 0,
+    agentsWithA2A: 0,
+    agentsWithX402: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
@@ -43,9 +43,9 @@ function HomeContent() {
           totalFeedback: statsData.totalFeedback ?? 0,
           agentsWithURI: statsData.agentsWithURI ?? 0,
           agentsWithMetadata: statsData.agentsWithMetadata ?? 0,
-          mcpAgents: statsData.mcpAgents ?? 0,
-          a2aAgents: statsData.a2aAgents ?? 0,
-          x402Agents: statsData.x402Agents ?? 0,
+          agentsWithMCP: statsData.agentsWithMCP ?? 0,
+          agentsWithA2A: statsData.agentsWithA2A ?? 0,
+          agentsWithX402: statsData.agentsWithX402 ?? 0,
         });
         
         if (tag) {
@@ -276,23 +276,23 @@ function HomeContent() {
               <CapabilityCard
                 title="MCP Tools"
                 icon="🔧"
-                count={stats.mcpAgents || 0}
+                count={stats.agentsWithMCP || 0}
                 href="/?mcp=true"
                 description="Tool-enabled agents with MCP endpoints."
               />
               <CapabilityCard
                 title="A2A Ready"
                 icon="🤖"
-                count={stats.a2aAgents || 0}
+                count={stats.agentsWithA2A || 0}
                 href="/?a2a=true"
                 description="Agents exposing A2A skills."
               />
               <CapabilityCard
                 title="x402 Payments"
                 icon="💰"
-                count={stats.x402Agents || 0}
+                count={stats.agentsWithX402 || 0}
                 href="/?x402=true"
-                description="Agents requiring x402 payments."
+                description="Agents accepting x402 payments."
               />
             </div>
           </div>

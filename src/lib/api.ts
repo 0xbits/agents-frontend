@@ -53,9 +53,9 @@ export interface StatsResponse {
   totalFeedback: number;
   agentsWithURI?: number;
   agentsWithMetadata?: number;
-  mcpAgents?: number;
-  a2aAgents?: number;
-  x402Agents?: number;
+  agentsWithMCP?: number;
+  agentsWithA2A?: number;
+  agentsWithX402?: number;
 }
 
 export interface FeedbackItem {
@@ -95,7 +95,7 @@ export async function searchAgents(
   if (options.a2a) params.set("a2a", "true");
   if (options.x402) params.set("x402", "true");
 
-  const res = await fetch(`${API_URL}/agents?${params}`, {
+  const res = await fetch(`${API_URL}/search?${params}`, {
     next: { revalidate: 60 },
   });
   
