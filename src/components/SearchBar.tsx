@@ -74,26 +74,6 @@ export function SearchBar({
         )}
       </div>
       
-      <div className="flex items-center justify-center gap-3 mt-4 text-sm text-[var(--foreground-subtle)]">
-        {["DeFi", "data", "social", "security"].map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => {
-              setQuery(suggestion);
-              onSearch?.(suggestion);
-            }}
-            className="
-              px-3 py-1.5 rounded-lg
-              border border-[var(--surface-border)]
-              hover:border-[var(--surface-border-hover)] hover:text-[var(--foreground-muted)]
-              transition-all duration-200
-            "
-          >
-            {suggestion}
-          </button>
-        ))}
-      </div>
     </form>
   );
 }
