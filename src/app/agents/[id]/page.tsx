@@ -4,7 +4,6 @@ import { getAgent, getAgentFeedback } from "@/lib/api";
 import { Badge } from "@/components/Badge";
 import { AgentHero } from "@/components/AgentDetail/AgentHero";
 import { CapabilityBadges } from "@/components/AgentDetail/CapabilityBadges";
-import { ServicesSection } from "@/components/AgentDetail/ServicesSection";
 import { ToolsList } from "@/components/AgentDetail/ToolsList";
 import { TechnicalDetails } from "@/components/AgentDetail/TechnicalDetails";
 import { FeedbackSection } from "@/components/AgentDetail/FeedbackSection";
@@ -67,13 +66,49 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   const mcpEndpoint = agent.hasMCP ? findServiceEndpoint(agent.services, /mcp/i) : null;
   const a2aEndpoint = agent.hasA2A ? findServiceEndpoint(agent.services, /a2a/i) : null;
   const showTryItModule = Boolean((agent.hasMCP && mcpEndpoint) || (agent.hasA2A && a2aEndpoint));
+  
+  const hasMcpTools = agent.mcpTools && agent.mcpTools.length > 0;
+  const hasA2aSkills = agent.a2aSkills && agent.a2aSkills.length > 0;
+  const hasOnlyOneSide = (hasMcpTools && !hasA2aSkills) || (!hasMcpTools && hasA2aSkills);
 
   return (
-    <div className="min-h-screen">
-      <main className="pt-20 pb-24">
+    <div className="min-h-screen flex flex-col">
+      {/* Header - same as homepage */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/90 backdrop-blur-xl border-b border-[var(--surface-border)]">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="font-medium tracking-tight">agents</a>
+          
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-[var(--surface)]">
+            <a
+              href="/"
+              className="w-20 py-1.5 text-sm rounded-md transition-colors text-center bg-[var(--background)] text-[var(--foreground)] shadow-sm"
+            >
+              Agents
+            </a>
+            <a
+              href="/?tab=install"
+              className="w-20 py-1.5 text-sm rounded-md transition-colors text-center text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+            >
+              Install
+            </a>
+          </div>
+          
+          <a 
+            href="https://github.com/0xbits" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+          >
+            GitHub
+          </a>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 pt-20 pb-24">
         <section className="px-6 py-12">
           <div className="max-w-5xl mx-auto">
-            {/* Hero */}
+            {/* Hero with Reputation on right */}
             <AgentHero
               name={agent.name}
               id={agent.id}
@@ -82,6 +117,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               externalUrl={agent.externalUrl}
               registrationDate={registrationDate}
               etherscanUrl={etherscanUrl}
+              avgRating={agent.avgRating}
+              feedbackCount={agent.feedbackCount}
             />
 
             {/* Capabilities + Health (inline) */}
@@ -121,139 +158,69 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               </div>
             )}
 
-            {/* Two Column Layout */}
-            <div className="mt-10 grid gap-8 lg:grid-cols-3">
-              {/* Left: Services + Tools */}
-              <div className="lg:col-span-2 space-y-8">
-                {/* Services */}
-                {agent.services && agent.services.length > 0 && (
-                  <div className="space-y-3">
-                    <h2 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
-                      Services
-                    </h2>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {agent.services.map((service, index) => (
-                        <div
-                          key={`${service.name}-${index}`}
-                          className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)]"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-sm font-medium text-[var(--foreground)]">
-                              {service.name}
-                            </span>
-                            {service.version && (
-                              <span className="text-xs text-[var(--foreground-subtle)]">
-                                {service.version}
-                              </span>
-                            )}
-                          </div>
-                          <code className="text-xs text-[var(--foreground-muted)] break-all">
-                            {service.endpoint}
-                          </code>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Tools & Skills */}
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <ToolsList title="MCP Tools" items={agent.mcpTools} />
-                  <ToolsList title="A2A Skills" items={agent.a2aSkills} />
-                </div>
-
-                {/* Try It */}
-                {showTryItModule && (
-                  <div className="space-y-4">
-                    <CopyConfigButtons
-                      agent={agent}
-                      mcpEndpoint={mcpEndpoint}
-                      a2aEndpoint={a2aEndpoint}
-                    />
-                    <TryItModule
-                      mcpEndpoint={mcpEndpoint}
-                      a2aEndpoint={a2aEndpoint}
-                      mcpTools={agent.mcpTools}
-                      a2aSkills={agent.a2aSkills}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Reputation + Feedback */}
-              <div className="space-y-6">
-                {/* Trust & Reputation */}
-                <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)]">
-                  <h3 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider mb-3">
-                    Reputation
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[var(--foreground-subtle)]">Rating</span>
-                      <span className="text-sm font-medium text-[var(--foreground)]">
-                        {agent.avgRating != null ? agent.avgRating.toFixed(1) : "—"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[var(--foreground-subtle)]">Feedback</span>
-                      <span className="text-sm font-medium text-[var(--foreground)]">
-                        {agent.feedbackCount}
-                      </span>
-                    </div>
-                    {agent.supportedTrust && agent.supportedTrust.length > 0 && (
-                      <div className="pt-2 border-t border-[var(--surface-border)]">
-                        <span className="text-xs text-[var(--foreground-subtle)]">Trust mechanisms</span>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {agent.supportedTrust.map((trust) => (
-                            <Badge key={trust} variant="muted">
-                              {trust}
-                            </Badge>
-                          ))}
-                        </div>
+            {/* Services - Full Width */}
+            {agent.services && agent.services.length > 0 && (
+              <div className="mt-10 space-y-3">
+                <h2 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
+                  Services
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {agent.services.map((service, index) => (
+                    <div
+                      key={`${service.name}-${index}`}
+                      className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)]"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-sm font-medium text-[var(--foreground)]">
+                          {service.name}
+                        </span>
+                        {service.version && (
+                          <span className="text-xs text-[var(--foreground-subtle)]">
+                            {service.version}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Feedback List */}
-                {feedbackItems.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider">
-                      Recent Feedback
-                    </h3>
-                    <div className="space-y-2">
-                      {feedbackItems.slice(0, 5).map((item, i) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] text-sm"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[var(--foreground-muted)]">
-                              {item.rating?.toFixed(1) || "—"}
-                            </span>
-                            <span className="text-xs text-[var(--foreground-subtle)]">
-                              {item.client?.slice(0, 8)}...
-                            </span>
-                          </div>
-                          {item.tags && item.tags.length > 0 && (
-                            <div className="mt-1 flex gap-1">
-                              {item.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="text-xs text-[var(--foreground-subtle)]"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      <code className="text-xs text-[var(--foreground-muted)] break-all">
+                        {service.endpoint}
+                      </code>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tools & Skills - Two columns (or full width if only one) */}
+            {(hasMcpTools || hasA2aSkills) && (
+              <div className={`mt-8 grid gap-6 ${hasOnlyOneSide ? "" : "sm:grid-cols-2"}`}>
+                {hasA2aSkills && (
+                  <ToolsList title="A2A Skills" items={agent.a2aSkills} />
+                )}
+                {hasMcpTools && (
+                  <ToolsList title="MCP Tools" items={agent.mcpTools} />
                 )}
               </div>
-            </div>
+            )}
+
+            {/* Copy Config Buttons */}
+            {(mcpEndpoint || a2aEndpoint) && (
+              <div className="mt-6">
+                <CopyConfigButtons
+                  agent={agent}
+                  mcpEndpoint={mcpEndpoint}
+                  a2aEndpoint={a2aEndpoint}
+                />
+              </div>
+            )}
+
+            {/* Try It Module */}
+            {showTryItModule && (
+              <TryItModule
+                mcpEndpoint={mcpEndpoint}
+                a2aEndpoint={a2aEndpoint}
+                mcpTools={agent.mcpTools}
+                a2aSkills={agent.a2aSkills}
+              />
+            )}
 
             {/* Technical Details */}
             <TechnicalDetails
@@ -263,9 +230,32 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               metadataUpdatedAt={agent.metadataUpdatedAt}
               uri={agent.uri}
             />
+
+            {/* Feedback - At Bottom */}
+            <FeedbackSection items={feedbackItems} />
           </div>
         </section>
       </main>
+
+      {/* Footer - same as homepage */}
+      <footer className="fixed bottom-4 left-6 right-6 flex items-center justify-between text-xs text-[var(--foreground-subtle)]">
+        <a
+          href="https://b1ts.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-[var(--foreground-muted)] transition-colors"
+        >
+          Built by Bits
+        </a>
+        <a
+          href="https://eips.ethereum.org/EIPS/eip-8004"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-[var(--foreground-muted)] transition-colors font-mono"
+        >
+          ERC8004
+        </a>
+      </footer>
     </div>
   );
 }

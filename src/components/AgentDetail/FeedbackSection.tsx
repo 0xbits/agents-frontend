@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Star, ExternalLink } from "lucide-react";
 import type { FeedbackItem } from "@/lib/api";
 
 interface FeedbackSectionProps {
@@ -16,6 +16,9 @@ const formatDate = (value?: string | null) => {
 
 const truncateAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+const getInterfaceUrl = (address: string) =>
+  `https://app.interface.social/${address}`;
 
 export function FeedbackSection({ items }: FeedbackSectionProps) {
   const count = items.length;
@@ -50,7 +53,7 @@ export function FeedbackSection({ items }: FeedbackSectionProps) {
                             key={tag}
                             className="px-2 py-0.5 text-xs rounded border border-[var(--surface-border)] text-[var(--foreground-subtle)]"
                           >
-                            {tag}
+                            #{tag}
                           </span>
                         ))}
                       </div>
@@ -59,10 +62,23 @@ export function FeedbackSection({ items }: FeedbackSectionProps) {
                         No comment
                       </p>
                     )}
-                    <p className="mt-2 text-xs text-[var(--foreground-subtle)]">
-                      {truncateAddress(item.client)}
-                      {item.createdAt ? ` · ${formatDate(item.createdAt)}` : ""}
-                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-[var(--foreground-subtle)]">
+                      <a
+                        href={getInterfaceUrl(item.client)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-mono hover:text-[var(--foreground-muted)] transition-colors"
+                      >
+                        {truncateAddress(item.client)}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      {item.createdAt && (
+                        <>
+                          <span>·</span>
+                          <span>{formatDate(item.createdAt)}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -96,7 +96,7 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
               )}
             </div>
             <p className="text-xs text-[var(--foreground-subtle)] font-mono">
-              {agent.id}
+              #{agent.id}
             </p>
           </div>
         </div>

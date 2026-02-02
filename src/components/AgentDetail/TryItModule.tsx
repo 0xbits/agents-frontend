@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { Play, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
 interface TryItModuleProps {
   mcpEndpoint?: string | null;
@@ -14,6 +15,13 @@ type Mode = "mcp" | "a2a";
 interface ParamRow {
   key: string;
   value: string;
+}
+
+interface ExecutionResult {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  latencyMs?: number;
 }
 
 export function TryItModule({
@@ -32,12 +40,14 @@ export function TryItModule({
   const [mode, setMode] = useState<Mode | null>(modes[0] ?? null);
   const [selectedName, setSelectedName] = useState<string>("");
   const [params, setParams] = useState<ParamRow[]>([{ key: "", value: "" }]);
-  const [preview, setPreview] = useState<string>("");
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [result, setResult] = useState<ExecutionResult | null>(null);
 
   useEffect(() => {
     if (!mode) return;
     const options = mode === "mcp" ? mcpTools ?? [] : a2aSkills ?? [];
     setSelectedName(options[0] ?? "");
+    setResult(null);
   }, [mode, mcpTools, a2aSkills]);
 
   useEffect(() => {
@@ -50,7 +60,6 @@ export function TryItModule({
 
   const options = mode === "mcp" ? mcpTools ?? [] : a2aSkills ?? [];
   const endpoint = mode === "mcp" ? mcpEndpoint : a2aEndpoint;
-  const method = mode === "mcp" ? "tools/call" : "skills/call";
 
   const handleParamChange = (index: number, field: "key" | "value", value: string) => {
     setParams((current) =>
@@ -77,30 +86,175 @@ export function TryItModule({
     return args;
   };
 
-  const generatePreview = () => {
-    const request = {
-      method,
-      params: {
-        name: selectedName,
-        arguments: buildArguments(),
-      },
-    };
+  const executeRequest = async () => {
+    if (!endpoint || !selectedName) return;
+    
+    setIsExecuting(true);
+    setResult(null);
+    
+    const startTime = performance.now();
+    
+    try {
+      if (mode === "mcp") {
+        // MCP uses JSON-RPC over HTTP POST
+        const request = {
+          jsonrpc: "2.0",
+          id: Date.now(),
+          method: "tools/call",
+          params: {
+            name: selectedName,
+            arguments: buildArguments(),
+          },
+        };
 
-    setPreview(JSON.stringify(request, null, 2));
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(request),
+        });
+
+        const latencyMs = Math.round(performance.now() - startTime);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          setResult({
+            success: false,
+            error: `HTTP ${response.status}: ${errorText || response.statusText}`,
+            latencyMs,
+          });
+          return;
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          setResult({
+            success: false,
+            error: data.error.message || JSON.stringify(data.error),
+            latencyMs,
+          });
+        } else {
+          setResult({
+            success: true,
+            data: data.result ?? data,
+            latencyMs,
+          });
+        }
+      } else {
+        // A2A uses JSON-RPC style as well
+        const request = {
+          jsonrpc: "2.0",
+          id: Date.now(),
+          method: "tasks/send",
+          params: {
+            message: {
+              role: "user",
+              parts: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    skill: selectedName,
+                    arguments: buildArguments(),
+                  }),
+                },
+              ],
+            },
+          },
+        };
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(request),
+        });
+
+        const latencyMs = Math.round(performance.now() - startTime);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          setResult({
+            success: false,
+            error: `HTTP ${response.status}: ${errorText || response.statusText}`,
+            latencyMs,
+          });
+          return;
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          setResult({
+            success: false,
+            error: data.error.message || JSON.stringify(data.error),
+            latencyMs,
+          });
+        } else {
+          setResult({
+            success: true,
+            data: data.result ?? data,
+            latencyMs,
+          });
+        }
+      }
+    } catch (err) {
+      const latencyMs = Math.round(performance.now() - startTime);
+      setResult({
+        success: false,
+        error: err instanceof Error ? err.message : "Request failed",
+        latencyMs,
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const getRequestPreview = () => {
+    if (mode === "mcp") {
+      return {
+        jsonrpc: "2.0",
+        id: "...",
+        method: "tools/call",
+        params: {
+          name: selectedName,
+          arguments: buildArguments(),
+        },
+      };
+    } else {
+      return {
+        jsonrpc: "2.0",
+        id: "...",
+        method: "tasks/send",
+        params: {
+          message: {
+            role: "user",
+            parts: [{ type: "text", text: `{skill: "${selectedName}", ...}` }],
+          },
+        },
+      };
+    }
   };
 
   return (
-    <section className="mt-12">
+    <section className="mt-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
           Try it out
         </h2>
+        {result?.latencyMs !== undefined && (
+          <span className="text-xs text-[var(--foreground-subtle)]">
+            {result.latencyMs}ms
+          </span>
+        )}
       </div>
 
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 space-y-5">
         <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--foreground-subtle)]">
           <span className="uppercase tracking-wider text-xs">Endpoint</span>
-          <span className="text-[var(--foreground-muted)] break-all">{endpoint}</span>
+          <span className="text-[var(--foreground-muted)] break-all font-mono text-xs">{endpoint}</span>
         </div>
 
         {modes.length > 1 && (
@@ -132,7 +286,10 @@ export function TryItModule({
           </label>
           <select
             value={selectedName}
-            onChange={(event) => setSelectedName(event.target.value)}
+            onChange={(event) => {
+              setSelectedName(event.target.value);
+              setResult(null);
+            }}
             className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-subtle)] px-4 py-3 text-sm text-[var(--foreground)]"
           >
             {options.length === 0 ? (
@@ -157,18 +314,18 @@ export function TryItModule({
               onClick={addParamRow}
               className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
             >
-              Add parameter
+              + Add parameter
             </button>
           </div>
           <div className="space-y-2">
             {params.map((row, index) => (
-              <div key={`${row.key}-${index}`} className="flex items-center gap-2">
+              <div key={`param-${index}`} className="flex items-center gap-2">
                 <input
                   type="text"
                   value={row.key}
                   onChange={(event) => handleParamChange(index, "key", event.target.value)}
                   placeholder="parameter"
-                  className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)]"
+                  className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)] font-mono"
                 />
                 <input
                   type="text"
@@ -181,9 +338,9 @@ export function TryItModule({
                   <button
                     type="button"
                     onClick={() => removeParamRow(index)}
-                    className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+                    className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] px-2"
                   >
-                    Remove
+                    ×
                   </button>
                 )}
               </div>
@@ -194,24 +351,65 @@ export function TryItModule({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={generatePreview}
-            disabled={!selectedName}
-            className="rounded-xl border border-[var(--surface-border-hover)] px-4 py-2 text-sm text-[var(--foreground)] hover:border-[var(--foreground)] disabled:opacity-50"
+            onClick={executeRequest}
+            disabled={!selectedName || isExecuting}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--foreground)] text-[var(--background)] px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            Generate request
+            {isExecuting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Executing...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Execute
+              </>
+            )}
           </button>
           <span className="text-xs text-[var(--foreground-subtle)]">
-            Preview only — no request sent
+            POST to {mode === "mcp" ? "MCP" : "A2A"} endpoint
           </span>
         </div>
 
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--background-subtle)] p-4">
-          <pre className="text-xs text-[var(--foreground-subtle)] whitespace-pre-wrap">
-            {preview
-              ? `POST ${endpoint}\n${preview}`
-              : "Generate a request to preview the payload."}
+        {/* Request Preview */}
+        <details className="group">
+          <summary className="text-xs text-[var(--foreground-subtle)] cursor-pointer hover:text-[var(--foreground-muted)]">
+            Show request body
+          </summary>
+          <pre className="mt-2 rounded-xl border border-[var(--surface-border)] bg-[var(--background-subtle)] p-4 text-xs text-[var(--foreground-subtle)] whitespace-pre-wrap overflow-x-auto font-mono">
+            {JSON.stringify(getRequestPreview(), null, 2)}
           </pre>
-        </div>
+        </details>
+
+        {/* Response */}
+        {result && (
+          <div className={`rounded-xl border p-4 ${
+            result.success 
+              ? "border-green-500/30 bg-green-500/5" 
+              : "border-red-500/30 bg-red-500/5"
+          }`}>
+            <div className="flex items-center gap-2 mb-3">
+              {result.success ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-500">Success</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-sm font-medium text-red-500">Error</span>
+                </>
+              )}
+            </div>
+            <pre className="text-xs whitespace-pre-wrap overflow-x-auto font-mono text-[var(--foreground-muted)]">
+              {result.success 
+                ? JSON.stringify(result.data, null, 2)
+                : result.error
+              }
+            </pre>
+          </div>
+        )}
       </div>
     </section>
   );

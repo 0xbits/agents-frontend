@@ -146,6 +146,8 @@ function HomeContent() {
     const mcp = searchParams.get("mcp") === "true";
     const a2a = searchParams.get("a2a") === "true";
     const x402 = searchParams.get("x402") === "true";
+    const defi = searchParams.get("defi") === "true";
+    const social = searchParams.get("social") === "true";
     const tag = searchParams.get("tag");
     const protocol = searchParams.get("protocol");
     
@@ -153,6 +155,8 @@ function HomeContent() {
     if (mcp) filters.add("mcp");
     if (a2a) filters.add("a2a");
     if (x402) filters.add("x402");
+    if (defi) filters.add("defi");
+    if (social) filters.add("social");
     setActiveFilters(filters);
     setTagFilter(tag);
     setProtocolFilter(protocol);
@@ -168,7 +172,7 @@ function HomeContent() {
           agentsWithX402: statsData.agentsWithX402 ?? 0,
         });
         
-        if (mcp || a2a || x402 || tag || protocol) {
+        if (mcp || a2a || x402 || defi || social || tag || protocol) {
           setHasSearched(true);
           const data = await searchAgents("", { 
             limit: 20, 
@@ -176,7 +180,7 @@ function HomeContent() {
             mcp, 
             a2a, 
             x402,
-            tag: tag || undefined,
+            tag: defi ? "defi" : social ? "social" : tag || undefined,
             protocol: protocol || undefined,
           });
           setAgents(data.results);
@@ -207,7 +211,7 @@ function HomeContent() {
         mcp: activeFilters.has("mcp"),
         a2a: activeFilters.has("a2a"),
         x402: activeFilters.has("x402"),
-        tag: tagFilter || undefined,
+        tag: activeFilters.has("defi") ? "defi" : activeFilters.has("social") ? "social" : tagFilter || undefined,
         protocol: protocolFilter || undefined,
       });
       setAgents(data.results);
@@ -238,6 +242,8 @@ function HomeContent() {
   const hasAnyFilter = activeFilters.size > 0 || tagFilter || protocolFilter;
 
   const filterButtons = [
+    { key: "defi", label: "DeFi" },
+    { key: "social", label: "Social" },
     { key: "mcp", label: "MCP" },
     { key: "a2a", label: "A2A" },
     { key: "x402", label: "x402" },
@@ -285,26 +291,31 @@ function HomeContent() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pt-20 pb-16">
+      <main className="flex-1 pt-20 pb-24">
         {tab === "agents" ? (
           <>
             {/* Search + Filters */}
             <section className="py-12 px-6">
               <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl font-medium tracking-tight mb-8 text-center">
+                <h1 className="text-3xl sm:text-4xl font-medium tracking-tight mb-2 text-center">
                   Find agent capabilities
                 </h1>
+                <p className="text-[var(--foreground-muted)] text-center mb-8">
+                  Find skills your agent needs
+                </p>
                 
-                <div className="flex gap-3 items-center">
-                  <div className="flex-1">
-                    <SearchBar onSearch={handleSearch} />
-                  </div>
-                  
+                {/* Search on its own line */}
+                <div className="mb-4">
+                  <SearchBar onSearch={handleSearch} />
+                </div>
+                
+                {/* Filters on second line */}
+                <div className="flex flex-wrap items-center gap-2">
                   {filterButtons.map((f) => (
                     <button
                       key={f.key}
                       onClick={() => toggleFilter(f.key)}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                         activeFilters.has(f.key)
                           ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
                           : "border-[var(--surface-border)] text-[var(--foreground-muted)] hover:border-[var(--foreground-subtle)]"
@@ -317,7 +328,7 @@ function HomeContent() {
                   {hasAnyFilter && (
                     <button
                       onClick={clearFilters}
-                      className="p-2 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
+                      className="p-1.5 text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] transition-colors"
                       title="Clear filters"
                     >
                       <X className="w-4 h-4" />
@@ -418,11 +429,45 @@ function HomeContent() {
                 
                 <button
                   onClick={() => setTab("install")}
-                  className="inline-flex items-center gap-2 text-sm text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-[var(--foreground)] text-[var(--background)] rounded-lg hover:opacity-90 transition-opacity"
                 >
                   Setup guide
                   <ArrowRight className="w-3 h-3" />
                 </button>
+              </div>
+            </section>
+
+            {/* Stats Bar */}
+            <section className="px-6 py-8 border-t border-[var(--surface-border)]">
+              <div className="max-w-3xl mx-auto">
+                <div className="flex items-center justify-center gap-8 sm:gap-16 text-center">
+                  <div>
+                    <div className="text-2xl font-medium text-[var(--foreground)]">
+                      {stats.totalAgents.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider mt-1">
+                      Total Agents
+                    </div>
+                  </div>
+                  <div className="w-px h-10 bg-[var(--surface-border)]" />
+                  <div>
+                    <div className="text-2xl font-medium text-[var(--foreground)]">
+                      {stats.agentsWithMCP.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider mt-1">
+                      With MCP
+                    </div>
+                  </div>
+                  <div className="w-px h-10 bg-[var(--surface-border)]" />
+                  <div>
+                    <div className="text-2xl font-medium text-[var(--foreground)]">
+                      {stats.agentsWithA2A.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--foreground-subtle)] uppercase tracking-wider mt-1">
+                      With A2A
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           </>
