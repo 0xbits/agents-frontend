@@ -17,10 +17,11 @@ const formatDate = (value?: string | null) => {
   );
 };
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   try {
-    const agent = await getAgent(params.id);
-    const titleName = agent.name || `Agent #${params.id}`;
+    const agent = await getAgent(id);
+    const titleName = agent.name || `Agent #${id}`;
     const description = agent.description?.slice(0, 160) || undefined;
 
     return {
@@ -34,14 +35,15 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     };
   } catch {
     return {
-      title: `Agent #${params.id} | agents.b1ts.dev`,
+      title: `Agent #${id} | agents.b1ts.dev`,
       description: "Agent details",
     };
   }
 }
 
-export default async function AgentDetailPage({ params }: { params: { id: string } }) {
-  const agent = await getAgent(params.id).catch(() => notFound());
+export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const agent = await getAgent(id).catch(() => notFound());
 
   const registrationDate = formatDate(agent.registeredAt);
   const etherscanUrl = agent.owner
