@@ -155,9 +155,11 @@ const getSessionId = (requestUrl: URL) =>
   requestUrl.searchParams.get("sessionId") ?? requestUrl.searchParams.get("session_id");
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
+  // Use headers to construct proper public URL (request.url may be localhost in SSR)
+  const host = request.headers.get("host") || "agents.b1ts.dev";
+  const proto = request.headers.get("x-forwarded-proto") || "https";
   const sessionId = crypto.randomUUID();
-  const endpointUrl = new URL(requestUrl.toString());
+  const endpointUrl = new URL(`${proto}://${host}/api/mcp`);
   endpointUrl.searchParams.set("sessionId", sessionId);
 
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
