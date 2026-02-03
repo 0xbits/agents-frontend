@@ -62,6 +62,8 @@ export interface FeedbackItem {
   client: string;
   rating: number;
   tags?: string[];
+  comment?: string | null;
+  endpoint?: string | null;
   createdAt: string;
   isRevoked?: boolean;
 }

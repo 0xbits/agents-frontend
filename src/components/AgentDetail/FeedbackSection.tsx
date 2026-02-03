@@ -168,30 +168,34 @@ export function FeedbackSection({
                     {formatDate(item.createdAt)}
                   </span>
                 </div>
-                {item.tags && item.tags.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    <span className="text-xs text-[var(--foreground-subtle)]">
-                      Tags:
-                    </span>
-                    {item.tags.filter(Boolean).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-0.5 rounded-full bg-[var(--surface)] text-xs text-[var(--foreground-subtle)]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                {item.comment && (
+                  <p className="text-sm text-[var(--foreground-muted)] mb-3 whitespace-pre-wrap">
+                    {item.comment}
+                  </p>
                 )}
-                <a
-                  href={getInterfaceUrl(item.client)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] font-mono inline-flex items-center gap-1"
-                >
-                  {truncateAddress(item.client)}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="flex flex-wrap items-center gap-2">
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {item.tags.filter(Boolean).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 rounded-full bg-[var(--surface)] text-xs text-[var(--foreground-subtle)]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <a
+                    href={getInterfaceUrl(item.client)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] font-mono inline-flex items-center gap-1 ml-auto"
+                  >
+                    {truncateAddress(item.client)}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
             ))}
           </div>
