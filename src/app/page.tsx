@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard } from "@/components";
+import { SearchBar, AgentCard, QuickStart } from "@/components";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
 import { X, Copy, Check, ArrowRight, ExternalLink } from "lucide-react";
 
@@ -307,6 +307,10 @@ function HomeContent() {
                 {/* Search on its own line */}
                 <div className="mb-4">
                   <SearchBar onSearch={handleSearch} />
+                </div>
+
+                <div className="mb-4">
+                  <QuickStart />
                 </div>
                 
                 {/* Filters on second line */}
