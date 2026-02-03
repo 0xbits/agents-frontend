@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Star, MessageSquare, ExternalLink, Check } from "lucide-react";
+import { Star, ExternalLink, Check } from "lucide-react";
 
 export interface Agent {
   id: string;
@@ -133,17 +133,15 @@ export function AgentCard({ agent, delay = 0 }: AgentCardProps) {
 
         {/* Stats - subtle */}
         <div className="flex items-center gap-4 pt-4 border-t border-[var(--surface-border)]">
-          {agent.rating != null && (
-            <div className="flex items-center gap-1.5 text-[var(--foreground-muted)]">
-              <Star className="w-3.5 h-3.5" />
-              <span className="text-sm">{agent.rating.toFixed(1)}</span>
-            </div>
-          )}
-          
-          {agent.feedbackCount !== undefined && (
-            <div className="flex items-center gap-1.5 text-[var(--foreground-subtle)]">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span className="text-sm">{agent.feedbackCount}</span>
+          {agent.feedbackCount != null && agent.feedbackCount > 0 && (
+            <div className="flex items-center gap-1 text-xs">
+              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              <span className="text-[var(--foreground-muted)]">
+                {agent.rating != null ? agent.rating.toFixed(1) : "—"}
+              </span>
+              <span className="text-[var(--foreground-subtle)]">
+                ({agent.feedbackCount})
+              </span>
             </div>
           )}
           

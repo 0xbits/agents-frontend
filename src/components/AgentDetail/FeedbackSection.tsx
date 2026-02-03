@@ -1,17 +1,52 @@
-import { Star, ExternalLink } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { Star, ExternalLink, MessageSquare } from "lucide-react";
 import type { FeedbackItem } from "@/lib/api";
 
 interface FeedbackSectionProps {
   items: FeedbackItem[];
+  avgRating?: number | null;
+  agentId?: string;
 }
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "";
-  const ts = Number(value);
-  if (Number.isNaN(ts)) return value;
-  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
-    new Date(ts * 1000)
+function StarRating({
+  rating,
+  size = "sm",
+}: {
+  rating: number;
+  size?: "sm" | "lg";
+}) {
+  const stars = Array.from({ length: 5 }, (_, i) => i < Math.round(rating));
+  const sizeClass = size === "lg" ? "w-5 h-5" : "w-4 h-4";
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {stars.map((filled, i) => (
+        <Star
+          key={i}
+          className={`${sizeClass} ${
+            filled
+              ? "fill-yellow-400 text-yellow-400"
+              : "fill-none text-[var(--foreground-subtle)]"
+          }`}
+        />
+      ))}
+    </div>
   );
+}
+
+const formatDate = (dateStr: string): string => {
+  const date = new Date(Number(dateStr) * 1000);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return date.toLocaleDateString();
 };
 
 const truncateAddress = (address: string) =>
@@ -20,71 +55,183 @@ const truncateAddress = (address: string) =>
 const getInterfaceUrl = (address: string) =>
   `https://app.interface.social/${address}`;
 
-export function FeedbackSection({ items }: FeedbackSectionProps) {
-  const count = items.length;
+const reputationRegistryUrl = "https://etherscan.io/address/0x...#writeContract";
+
+export function FeedbackSection({
+  items,
+  avgRating,
+  agentId,
+}: FeedbackSectionProps) {
+  const [filter, setFilter] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const validItems = useMemo(
+    () => items.filter((item) => !item.isRevoked),
+    [items]
+  );
+
+  const filteredItems = useMemo(() => {
+    if (filter === null) return validItems;
+    return validItems.filter((item) => Math.round(item.rating) === filter);
+  }, [validItems, filter]);
+
+  const displayItems = showAll ? filteredItems : filteredItems.slice(0, 5);
+  const hasMore = filteredItems.length > 5;
+
+  const ratingCounts = useMemo(() => {
+    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    validItems.forEach((item) => {
+      const rounded = Math.round(item.rating);
+      if (counts[rounded] !== undefined) counts[rounded] += 1;
+    });
+    return counts;
+  }, [validItems]);
+
+  const computedAvg = useMemo(() => {
+    if (avgRating != null) return avgRating;
+    if (validItems.length === 0) return null;
+    const total = validItems.reduce((sum, item) => sum + item.rating, 0);
+    return total / validItems.length;
+  }, [avgRating, validItems]);
+
+  const feedbackUrl = agentId
+    ? `${reputationRegistryUrl}?agentId=${encodeURIComponent(agentId)}`
+    : reputationRegistryUrl;
 
   return (
-    <section className="mt-12">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-          Feedback ({count})
-        </h2>
-      </div>
+    <section className="mt-10">
+      <h2 className="text-sm font-medium text-[var(--foreground-muted)] uppercase tracking-wider mb-4">
+        Reputation
+      </h2>
 
-      <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)]">
-        {count === 0 ? (
-          <div className="p-6 text-sm text-[var(--foreground-subtle)]">
-            No feedback yet. Be the first to leave a rating.
+      <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <StarRating rating={computedAvg ?? 0} size="lg" />
+          <div>
+            <span className="text-lg font-semibold text-[var(--foreground)]">
+              {computedAvg != null ? computedAvg.toFixed(1) : "—"}
+            </span>
+            <span className="text-sm text-[var(--foreground-subtle)] ml-1">
+              average
+            </span>
           </div>
-        ) : (
-          <div className="divide-y divide-[var(--surface-border)]">
-            {items.map((item, index) => (
-              <div key={`${item.client}-${index}`} className="p-5">
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center gap-1 text-[var(--foreground)]">
-                    <Star className="w-4 h-4" />
-                    <span className="text-sm font-medium">{item.rating}</span>
-                  </div>
-                  <div className="flex-1">
-                    {item.tags && item.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {item.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 text-xs rounded border border-[var(--surface-border)] text-[var(--foreground-subtle)]"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--foreground-muted)]">
-                        No comment
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2 text-xs text-[var(--foreground-subtle)]">
-                      <a
-                        href={getInterfaceUrl(item.client)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono hover:text-[var(--foreground-muted)] transition-colors"
-                      >
-                        {truncateAddress(item.client)}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                      {item.createdAt && (
-                        <>
-                          <span>·</span>
-                          <span>{formatDate(item.createdAt)}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <span className="text-sm text-[var(--foreground-subtle)]">
+            • {validItems.length} {validItems.length === 1 ? "review" : "reviews"}
+          </span>
+        </div>
+
+        {validItems.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className="text-xs text-[var(--foreground-subtle)]">
+              Filter:
+            </span>
+            <button
+              type="button"
+              onClick={() => setFilter(null)}
+              className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                filter === null
+                  ? "bg-[var(--foreground)] text-[var(--background)]"
+                  : "bg-[var(--background)] text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+              }`}
+            >
+              All ({validItems.length})
+            </button>
+            {[5, 4, 3, 2, 1].map((rating) => (
+              <button
+                key={rating}
+                type="button"
+                onClick={() =>
+                  setFilter((current) => (current === rating ? null : rating))
+                }
+                disabled={ratingCounts[rating] === 0}
+                className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  filter === rating
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "bg-[var(--background)] text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+                }`}
+              >
+                {rating}★ ({ratingCounts[rating]})
+              </button>
             ))}
           </div>
         )}
+
+        {displayItems.length > 0 ? (
+          <div className="space-y-3">
+            {displayItems.map((item, index) => (
+              <div
+                key={`${item.client}-${index}`}
+                className="p-4 rounded-xl bg-[var(--background)] border border-[var(--surface-border)]"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={item.rating} />
+                    <span className="text-xs text-[var(--foreground-subtle)]">
+                      {item.rating.toFixed(1)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-[var(--foreground-subtle)]">
+                    {formatDate(item.createdAt)}
+                  </span>
+                </div>
+                {item.tags && item.tags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <span className="text-xs text-[var(--foreground-subtle)]">
+                      Tags:
+                    </span>
+                    {item.tags.filter(Boolean).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 rounded-full bg-[var(--surface)] text-xs text-[var(--foreground-subtle)]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <a
+                  href={getInterfaceUrl(item.client)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] font-mono inline-flex items-center gap-1"
+                >
+                  {truncateAddress(item.client)}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-[var(--foreground-subtle)]">
+            <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No feedback yet</p>
+          </div>
+        )}
+
+        {hasMore && !showAll && (
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="mt-4 text-sm text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+          >
+            Show all {filteredItems.length} reviews
+          </button>
+        )}
+
+        <div className="mt-6 pt-6 border-t border-[var(--surface-border)]">
+          <a
+            href={feedbackUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+          >
+            Leave Feedback
+            <ExternalLink className="w-3 h-3" />
+          </a>
+          <p className="mt-1 text-xs text-[var(--foreground-subtle)]">
+            Submit feedback on-chain via the ReputationRegistry contract
+          </p>
+        </div>
       </div>
     </section>
   );

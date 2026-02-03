@@ -232,7 +232,11 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
             />
 
             {/* Feedback - At Bottom */}
-            <FeedbackSection items={feedbackItems} />
+            <FeedbackSection
+              items={feedbackItems}
+              avgRating={agent.avgRating}
+              agentId={agent.id}
+            />
           </div>
         </section>
       </main>
