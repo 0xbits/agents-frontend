@@ -1,39 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Star, ExternalLink, MessageSquare } from "lucide-react";
+import { ExternalLink, MessageSquare } from "lucide-react";
 import type { FeedbackItem } from "@/lib/api";
 
 interface FeedbackSectionProps {
   items: FeedbackItem[];
   avgRating?: number | null;
   agentId?: string;
-}
-
-function StarRating({
-  rating,
-  size = "sm",
-}: {
-  rating: number;
-  size?: "sm" | "lg";
-}) {
-  const stars = Array.from({ length: 5 }, (_, i) => i < Math.round(rating));
-  const sizeClass = size === "lg" ? "w-5 h-5" : "w-4 h-4";
-
-  return (
-    <div className="flex items-center gap-0.5">
-      {stars.map((filled, i) => (
-        <Star
-          key={i}
-          className={`${sizeClass} ${
-            filled
-              ? "fill-yellow-400 text-yellow-400"
-              : "fill-none text-[var(--foreground-subtle)]"
-          }`}
-        />
-      ))}
-    </div>
-  );
 }
 
 const formatDate = (dateStr: string): string => {
@@ -55,14 +29,15 @@ const truncateAddress = (address: string) =>
 const getInterfaceUrl = (address: string) =>
   `https://app.interface.social/${address}`;
 
-const reputationRegistryUrl = "https://etherscan.io/address/0x...#writeContract";
+const reputationRegistryUrl =
+  "https://etherscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63#writeContract";
 
 export function FeedbackSection({
   items,
   avgRating,
   agentId,
 }: FeedbackSectionProps) {
-  const [filter, setFilter] = useState<number | null>(null);
+  const [filter, setFilter] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
   const validItems = useMemo(
@@ -70,22 +45,43 @@ export function FeedbackSection({
     [items]
   );
 
+  const filters = useMemo(
+    () => [
+      { key: "90plus", label: "90+", min: 90, max: 100 },
+      { key: "70-89", label: "70-89", min: 70, max: 89 },
+      { key: "50-69", label: "50-69", min: 50, max: 69 },
+      { key: "<50", label: "<50", min: 0, max: 49 },
+    ],
+    []
+  );
+
   const filteredItems = useMemo(() => {
     if (filter === null) return validItems;
-    return validItems.filter((item) => Math.round(item.rating) === filter);
-  }, [validItems, filter]);
+    const range = filters.find((entry) => entry.key === filter);
+    if (!range) return validItems;
+    return validItems.filter((item) => {
+      const score = Math.round(item.rating);
+      return score >= range.min && score <= range.max;
+    });
+  }, [validItems, filter, filters]);
 
   const displayItems = showAll ? filteredItems : filteredItems.slice(0, 5);
   const hasMore = filteredItems.length > 5;
 
   const ratingCounts = useMemo(() => {
-    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const counts: Record<string, number> = {};
+    filters.forEach((range) => {
+      counts[range.key] = 0;
+    });
     validItems.forEach((item) => {
-      const rounded = Math.round(item.rating);
-      if (counts[rounded] !== undefined) counts[rounded] += 1;
+      const score = Math.round(item.rating);
+      const match = filters.find(
+        (range) => score >= range.min && score <= range.max
+      );
+      if (match) counts[match.key] += 1;
     });
     return counts;
-  }, [validItems]);
+  }, [validItems, filters]);
 
   const computedAvg = useMemo(() => {
     if (avgRating != null) return avgRating;
@@ -106,10 +102,9 @@ export function FeedbackSection({
 
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6">
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <StarRating rating={computedAvg ?? 0} size="lg" />
           <div>
             <span className="text-lg font-semibold text-[var(--foreground)]">
-              {computedAvg != null ? computedAvg.toFixed(1) : "—"}
+              {computedAvg != null ? Math.round(computedAvg) : "—"}
             </span>
             <span className="text-sm text-[var(--foreground-subtle)] ml-1">
               average
@@ -136,21 +131,21 @@ export function FeedbackSection({
             >
               All ({validItems.length})
             </button>
-            {[5, 4, 3, 2, 1].map((rating) => (
+            {filters.map((range) => (
               <button
-                key={rating}
+                key={range.key}
                 type="button"
                 onClick={() =>
-                  setFilter((current) => (current === rating ? null : rating))
+                  setFilter((current) => (current === range.key ? null : range.key))
                 }
-                disabled={ratingCounts[rating] === 0}
+                disabled={ratingCounts[range.key] === 0}
                 className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                  filter === rating
+                  filter === range.key
                     ? "bg-[var(--foreground)] text-[var(--background)]"
                     : "bg-[var(--background)] text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
                 }`}
               >
-                {rating}★ ({ratingCounts[rating]})
+                {range.label} ({ratingCounts[range.key]})
               </button>
             ))}
           </div>
@@ -165,9 +160,8 @@ export function FeedbackSection({
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <StarRating rating={item.rating} />
                     <span className="text-xs text-[var(--foreground-subtle)]">
-                      {item.rating.toFixed(1)}
+                      {Math.round(item.rating)}
                     </span>
                   </div>
                   <span className="text-xs text-[var(--foreground-subtle)]">

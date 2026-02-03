@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Copy, Check, Star } from "lucide-react";
+import { ExternalLink, Copy, Check } from "lucide-react";
 
 interface AgentHeroProps {
   name?: string | null;
@@ -140,9 +140,8 @@ export function AgentHero({
           </h3>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-[var(--foreground-muted)]" />
               <span className="text-lg font-medium text-[var(--foreground)]">
-                {avgRating != null ? avgRating.toFixed(1) : "—"}
+                {avgRating != null ? Math.round(avgRating) : "—"}
               </span>
             </div>
             <div className="text-sm text-[var(--foreground-subtle)]">
