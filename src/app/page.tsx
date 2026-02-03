@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SearchBar, AgentCard, QuickStart } from "@/components";
+import { SearchBar, AgentCard, QuickStart, WalletSearch } from "@/components";
 import { searchAgents, getTopAgents, getStats, type Agent } from "@/lib/api";
 import { X, Copy, Check, ExternalLink } from "lucide-react";
 
@@ -311,6 +311,22 @@ function HomeContent() {
 
                 <div className="mb-4">
                   <QuickStart />
+                </div>
+
+                {/* Wallet Search */}
+                <div className="mb-6">
+                  <details className="group">
+                    <summary className="text-xs text-[var(--foreground-subtle)] cursor-pointer hover:text-[var(--foreground-muted)] mb-2 list-none flex items-center gap-1">
+                      <span className="group-open:rotate-90 transition-transform">▸</span>
+                      Explore by wallet
+                    </summary>
+                    <div className="mt-3">
+                      <WalletSearch placeholder="vitalik.eth or 0x..." />
+                      <p className="mt-2 text-xs text-[var(--foreground-subtle)]">
+                        See which agents a wallet owns, endorses, or reviews
+                      </p>
+                    </div>
+                  </details>
                 </div>
                 
                 {/* Filters on second line */}

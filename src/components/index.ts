@@ -5,3 +5,4 @@ export { AccessMethods } from './AccessMethods';
 export { McpConfig } from './McpConfig';
 export { HealthBadge } from './HealthBadge';
 export { QuickStart } from './QuickStart';
+export { WalletSearch } from './WalletSearch';

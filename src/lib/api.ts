@@ -171,3 +171,92 @@ export async function getAgentHealth(agentId: string): Promise<AgentHealth | nul
     return null;
   }
 }
+
+// Wallet profile types
+export interface WalletAgentSummary {
+  id: string;
+  name?: string | null;
+  image?: string | null;
+  feedbackCount?: number;
+  avgRating?: number | null;
+}
+
+export interface WalletEndorsement {
+  agentId: string;
+  agentName?: string | null;
+  agentImage?: string | null;
+  rating: number;
+}
+
+export interface WalletFeedbackEntry {
+  agentId: string;
+  agentName?: string | null;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface WalletProfile {
+  address: string;
+  owned: WalletAgentSummary[];
+  endorsed: WalletEndorsement[];
+  feedbackGiven: WalletFeedbackEntry[];
+  stats: {
+    agentsOwned: number;
+    feedbackGiven: number;
+    agentsEndorsed: number;
+  };
+}
+
+export async function getWalletProfile(address: string): Promise<WalletProfile> {
+  const res = await fetch(`${API_URL}/wallets/${address}`, {
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) throw new Error("Wallet not found");
+  return res.json();
+}
+
+// Global feedback feed types
+export interface FeedbackFeedItem {
+  agentId: string;
+  agentName?: string | null;
+  agentImage?: string | null;
+  client: string;
+  rating: number | null;
+  tags: string[];
+  endpoint?: string | null;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface FeedbackFeedResponse {
+  stats: {
+    total: number;
+    avgRating: number;
+    uniqueUsers: number;
+    last24h: number;
+  };
+  feedback: FeedbackFeedItem[];
+  pagination: {
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  };
+}
+
+export async function getFeedbackFeed(options: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<FeedbackFeedResponse> {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", options.limit.toString());
+  if (options.offset) params.set("offset", options.offset.toString());
+
+  const res = await fetch(`${API_URL}/feedback?${params}`, {
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch feedback feed");
+  return res.json();
+}

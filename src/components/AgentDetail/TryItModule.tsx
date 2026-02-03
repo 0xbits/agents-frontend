@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Play, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Play, Loader2, AlertCircle, CheckCircle, Info, RefreshCw } from "lucide-react";
 
 interface TryItModuleProps {
   mcpEndpoint?: string | null;
@@ -12,9 +12,21 @@ interface TryItModuleProps {
 
 type Mode = "mcp" | "a2a";
 
-interface ParamRow {
-  key: string;
-  value: string;
+interface SchemaProperty {
+  type?: string;
+  description?: string;
+  enum?: string[];
+  default?: unknown;
+}
+
+interface ToolSchema {
+  name: string;
+  description?: string;
+  inputSchema?: {
+    type?: string;
+    properties?: Record<string, SchemaProperty>;
+    required?: string[];
+  };
 }
 
 interface ExecutionResult {
@@ -39,16 +51,91 @@ export function TryItModule({
 
   const [mode, setMode] = useState<Mode | null>(modes[0] ?? null);
   const [selectedName, setSelectedName] = useState<string>("");
-  const [params, setParams] = useState<ParamRow[]>([{ key: "", value: "" }]);
+  const [params, setParams] = useState<Record<string, string>>({});
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
+  
+  // Schema fetching state
+  const [schemas, setSchemas] = useState<ToolSchema[]>([]);
+  const [schemasLoading, setSchemaLoading] = useState(false);
+  const [schemasError, setSchemasError] = useState<string | null>(null);
+
+  // Fetch tool schemas from MCP endpoint
+  const fetchToolSchemas = useCallback(async (endpoint: string) => {
+    setSchemaLoading(true);
+    setSchemasError(null);
+    
+    try {
+      const request = {
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "tools/list",
+        params: {},
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || "Failed to fetch tools");
+      }
+
+      const tools = data.result?.tools ?? data.tools ?? [];
+      setSchemas(tools);
+      
+      // Auto-select first tool if none selected
+      if (tools.length > 0 && !selectedName) {
+        setSelectedName(tools[0].name);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch schemas";
+      setSchemasError(message);
+      // Fall back to tool names only
+      setSchemas([]);
+    } finally {
+      setSchemaLoading(false);
+    }
+  }, [selectedName]);
+
+  // Fetch schemas when MCP endpoint changes
+  useEffect(() => {
+    if (mode === "mcp" && mcpEndpoint) {
+      fetchToolSchemas(mcpEndpoint);
+    } else {
+      setSchemas([]);
+    }
+  }, [mode, mcpEndpoint, fetchToolSchemas]);
+
+  // Reset params when tool changes
+  useEffect(() => {
+    setParams({});
+    setResult(null);
+  }, [selectedName]);
 
   useEffect(() => {
     if (!mode) return;
-    const options = mode === "mcp" ? mcpTools ?? [] : a2aSkills ?? [];
-    setSelectedName(options[0] ?? "");
-    setResult(null);
-  }, [mode, mcpTools, a2aSkills]);
+    const options = mode === "mcp" 
+      ? (schemas.length > 0 ? schemas.map(s => s.name) : mcpTools ?? [])
+      : a2aSkills ?? [];
+    if (options.length > 0 && !selectedName) {
+      setSelectedName(options[0]);
+    }
+  }, [mode, schemas, mcpTools, a2aSkills, selectedName]);
 
   useEffect(() => {
     if (!mode && modes.length > 0) {
@@ -58,31 +145,60 @@ export function TryItModule({
 
   if (!mode) return null;
 
-  const options = mode === "mcp" ? mcpTools ?? [] : a2aSkills ?? [];
   const endpoint = mode === "mcp" ? mcpEndpoint : a2aEndpoint;
+  
+  // Get current tool schema
+  const currentSchema = schemas.find(s => s.name === selectedName);
+  const hasSchema = currentSchema?.inputSchema?.properties;
+  
+  // Options for dropdown
+  const options = mode === "mcp" 
+    ? (schemas.length > 0 ? schemas.map(s => s.name) : mcpTools ?? [])
+    : a2aSkills ?? [];
 
-  const handleParamChange = (index: number, field: "key" | "value", value: string) => {
-    setParams((current) =>
-      current.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [field]: value } : row
-      )
-    );
-  };
-
-  const addParamRow = () => {
-    setParams((current) => [...current, { key: "", value: "" }]);
-  };
-
-  const removeParamRow = (index: number) => {
-    setParams((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  const handleParamChange = (key: string, value: string) => {
+    setParams(current => ({ ...current, [key]: value }));
   };
 
   const buildArguments = () => {
-    const args: Record<string, string> = {};
-    for (const row of params) {
-      if (row.key.trim().length === 0) continue;
-      args[row.key.trim()] = row.value;
+    const args: Record<string, unknown> = {};
+    
+    if (hasSchema && currentSchema?.inputSchema?.properties) {
+      // Use schema to properly type params
+      for (const [key, prop] of Object.entries(currentSchema.inputSchema.properties)) {
+        const value = params[key];
+        if (value === undefined || value === "") continue;
+        
+        // Type coercion based on schema
+        if (prop.type === "number" || prop.type === "integer") {
+          args[key] = Number(value);
+        } else if (prop.type === "boolean") {
+          args[key] = value === "true";
+        } else if (prop.type === "array") {
+          try {
+            args[key] = JSON.parse(value);
+          } catch {
+            args[key] = value.split(",").map(s => s.trim());
+          }
+        } else if (prop.type === "object") {
+          try {
+            args[key] = JSON.parse(value);
+          } catch {
+            args[key] = value;
+          }
+        } else {
+          args[key] = value;
+        }
+      }
+    } else {
+      // Manual mode - just use string values
+      for (const [key, value] of Object.entries(params)) {
+        if (key.trim() && value) {
+          args[key.trim()] = value;
+        }
+      }
     }
+    
     return args;
   };
 
@@ -96,7 +212,6 @@ export function TryItModule({
     
     try {
       if (mode === "mcp") {
-        // MCP uses JSON-RPC over HTTP POST
         const request = {
           jsonrpc: "2.0",
           id: Date.now(),
@@ -109,9 +224,7 @@ export function TryItModule({
 
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(request),
         });
 
@@ -143,7 +256,7 @@ export function TryItModule({
           });
         }
       } else {
-        // A2A uses JSON-RPC style as well
+        // A2A
         const request = {
           jsonrpc: "2.0",
           id: Date.now(),
@@ -151,24 +264,20 @@ export function TryItModule({
           params: {
             message: {
               role: "user",
-              parts: [
-                {
-                  type: "text",
-                  text: JSON.stringify({
-                    skill: selectedName,
-                    arguments: buildArguments(),
-                  }),
-                },
-              ],
+              parts: [{
+                type: "text",
+                text: JSON.stringify({
+                  skill: selectedName,
+                  arguments: buildArguments(),
+                }),
+              }],
             },
           },
         };
 
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(request),
         });
 
@@ -238,6 +347,119 @@ export function TryItModule({
     }
   };
 
+  // Render schema-driven form field
+  const renderSchemaField = (key: string, prop: SchemaProperty) => {
+    const isRequired = currentSchema?.inputSchema?.required?.includes(key);
+    const value = params[key] ?? "";
+    
+    return (
+      <div key={key} className="space-y-1.5">
+        <label className="flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
+          <span className="font-mono">{key}</span>
+          {isRequired && <span className="text-red-400">*</span>}
+          {prop.type && (
+            <span className="text-[var(--foreground-subtle)]">({prop.type})</span>
+          )}
+        </label>
+        {prop.description && (
+          <p className="text-xs text-[var(--foreground-subtle)] mb-1">{prop.description}</p>
+        )}
+        {prop.enum ? (
+          <select
+            value={value}
+            onChange={(e) => handleParamChange(key, e.target.value)}
+            className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)]"
+          >
+            <option value="">Select...</option>
+            {prop.enum.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        ) : prop.type === "boolean" ? (
+          <select
+            value={value}
+            onChange={(e) => handleParamChange(key, e.target.value)}
+            className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)]"
+          >
+            <option value="">Select...</option>
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        ) : (
+          <input
+            type={prop.type === "number" || prop.type === "integer" ? "number" : "text"}
+            value={value}
+            onChange={(e) => handleParamChange(key, e.target.value)}
+            placeholder={prop.default !== undefined ? String(prop.default) : `Enter ${key}`}
+            className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)] font-mono"
+          />
+        )}
+      </div>
+    );
+  };
+
+  // Render manual param input (fallback)
+  const renderManualParams = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs uppercase tracking-wider text-[var(--foreground-subtle)]">
+          Parameters
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            const newKey = `param${Object.keys(params).length + 1}`;
+            setParams(current => ({ ...current, [newKey]: "" }));
+          }}
+          className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
+        >
+          + Add parameter
+        </button>
+      </div>
+      <div className="space-y-2">
+        {Object.entries(params).map(([key, value], index) => (
+          <div key={`param-${index}`} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={key}
+              onChange={(e) => {
+                const newParams = { ...params };
+                delete newParams[key];
+                newParams[e.target.value] = value;
+                setParams(newParams);
+              }}
+              placeholder="parameter"
+              className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)] font-mono"
+            />
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => handleParamChange(key, e.target.value)}
+              placeholder="value"
+              className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const newParams = { ...params };
+                delete newParams[key];
+                setParams(newParams);
+              }}
+              className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] px-2"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {Object.keys(params).length === 0 && (
+          <p className="text-xs text-[var(--foreground-subtle)] italic">
+            No parameters configured. Click &quot;+ Add parameter&quot; to add one.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <section className="mt-8">
       <div className="flex items-center justify-between mb-4">
@@ -281,9 +503,22 @@ export function TryItModule({
         )}
 
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-wider text-[var(--foreground-subtle)]">
-            Select {mode === "mcp" ? "tool" : "skill"}
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-wider text-[var(--foreground-subtle)]">
+              Select {mode === "mcp" ? "tool" : "skill"}
+            </label>
+            {mode === "mcp" && mcpEndpoint && (
+              <button
+                type="button"
+                onClick={() => fetchToolSchemas(mcpEndpoint)}
+                disabled={schemasLoading}
+                className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] inline-flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3 h-3 ${schemasLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+            )}
+          </div>
           <select
             value={selectedName}
             onChange={(event) => {
@@ -302,50 +537,44 @@ export function TryItModule({
               ))
             )}
           </select>
+          
+          {/* Tool description */}
+          {currentSchema?.description && (
+            <p className="text-xs text-[var(--foreground-subtle)] flex items-start gap-2 mt-2">
+              <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              {currentSchema.description}
+            </p>
+          )}
         </div>
 
+        {/* Schema status */}
+        {mode === "mcp" && schemasError && (
+          <div className="text-xs text-amber-500 flex items-center gap-2">
+            <AlertCircle className="w-3 h-3" />
+            Schema fetch failed: {schemasError}. Using manual input.
+          </div>
+        )}
+
+        {/* Parameters - schema-driven or manual */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-[var(--foreground-subtle)]">
-              Parameters
-            </span>
-            <button
-              type="button"
-              onClick={addParamRow}
-              className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)]"
-            >
-              + Add parameter
-            </button>
-          </div>
-          <div className="space-y-2">
-            {params.map((row, index) => (
-              <div key={`param-${index}`} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={row.key}
-                  onChange={(event) => handleParamChange(index, "key", event.target.value)}
-                  placeholder="parameter"
-                  className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)] font-mono"
-                />
-                <input
-                  type="text"
-                  value={row.value}
-                  onChange={(event) => handleParamChange(index, "value", event.target.value)}
-                  placeholder="value"
-                  className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background-subtle)] px-3 py-2 text-sm text-[var(--foreground)]"
-                />
-                {params.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeParamRow(index)}
-                    className="text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground-muted)] px-2"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <span className="text-xs uppercase tracking-wider text-[var(--foreground-subtle)]">
+            Parameters
+            {hasSchema && (
+              <span className="ml-2 text-green-500 font-normal normal-case">
+                ✓ schema loaded
+              </span>
+            )}
+          </span>
+          
+          {hasSchema && currentSchema?.inputSchema?.properties ? (
+            <div className="space-y-4">
+              {Object.entries(currentSchema.inputSchema.properties).map(([key, prop]) =>
+                renderSchemaField(key, prop)
+              )}
+            </div>
+          ) : (
+            renderManualParams()
+          )}
         </div>
 
         <div className="flex items-center gap-3">
